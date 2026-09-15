@@ -8,15 +8,42 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::latest()->paginate(10);
+        $query = User::latest();
+
+        // Tìm kiếm theo tên, email hoặc SĐT
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        // Lọc theo vai trò (admin/customer)
+        if ($request->filled('role')) {
+            $query->where('role', $request->role);
+        }
+
+        // Lọc theo trạng thái hoạt động
+        if ($request->filled('status')) {
+            $query->where('is_active', $request->status === 'active');
+        }
+
+        $users = $query->paginate(10)->withQueryString();
+
         return view('admin.users.index', compact('users'));
+    }
+
+    public function show(User $user)
+    {
+        return view('admin.users.show', compact('user'));
     }
 
     public function toggleStatus(User $user)
     {
-        // Không cho phép tự khóa tài khoản của chính mình
         if ($user->id === auth()->id()) {
             return back()->with('error', 'Bạn không thể tự khóa tài khoản của chính mình!');
         }

@@ -33,6 +33,10 @@
             <a href="{{ route('admin.products.index') }}"
                 class="flex items-center px-4 py-2.5 rounded-lg hover:bg-slate-800 {{ request()->routeIs('admin.products.*') ? 'bg-slate-800 text-rose-400 font-bold' : '' }}">
                 💐 Quản lý sản phẩm
+                <a href="{{ route('admin.orders.index') }}"
+                    class="flex items-center px-4 py-2.5 rounded-lg hover:bg-slate-800 {{ request()->routeIs('admin.orders.*') ? 'bg-slate-800 text-rose-400 font-bold' : '' }}">
+                    📦 Quản lý đơn hàng
+                </a>
             </a>
             <div class="p-4 border-t border-slate-800">
                 <form method="POST" action="{{ route('logout') }}">

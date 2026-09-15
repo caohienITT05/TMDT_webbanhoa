@@ -7,6 +7,11 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\DeliverySlot;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Payment;
+use App\Models\User
 
 class DatabaseSeeder extends Seeder
 {
@@ -87,5 +92,52 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ]
         );
+        // 1. Tạo các khung giờ hẹn giao hoa
+$slot1 = DeliverySlot::firstOrCreate(['time_range' => '08:00 - 10:00 (Sáng sớm)'], ['max_orders' => 20]);
+$slot2 = DeliverySlot::firstOrCreate(['time_range' => '10:00 - 12:00 (Trưa)'], ['max_orders' => 20]);
+$slot3 = DeliverySlot::firstOrCreate(['time_range' => '14:00 - 17:00 (Chiều)'], ['max_orders' => 25]);
+$slot4 = DeliverySlot::firstOrCreate(['time_range' => '18:00 - 20:00 (Tối tiệc)'], ['max_orders' => 15]);
+
+// 2. Tạo đơn hàng hoa mẫu kèm thông điệp thiệp
+$customer = User::where('role', 'customer')->first();
+$product1 = Product::first();
+
+if ($customer && $product1) {
+    $order = Order::updateOrCreate(
+        ['recipient_phone' => '0912345678'],
+        [
+            'user_id' => $customer->id,
+            'delivery_slot_id' => $slot3->id,
+            'recipient_name' => 'Nguyễn Thị Thu Hà',
+            'recipient_phone' => '0912345678',
+            'recipient_address' => 'Phòng 402, Tòa nhà Landmark, Ba Đình, Hà Nội',
+            'delivery_date' => now()->addDay(),
+            'card_message' => 'Chúc mừng sinh nhật em gái yêu quý! Chúc em luôn xinh đẹp, rạng rỡ như những đóa hoa này.',
+            'order_note' => 'Giao hàng đúng giờ, gọi trước 15 phút, không để hoa dập nát.',
+            'subtotal' => $product1->price,
+            'discount_amount' => 0,
+            'total_amount' => $product1->price,
+            'status' => 'CONFIRMED',
+        ]
+    );
+
+    OrderItem::updateOrCreate(
+        ['order_id' => $order->id, 'product_id' => $product1->id],
+        [
+            'quantity' => 1,
+            'price' => $product1->price,
+            'total' => $product1->price,
+        ]
+    );
+
+    Payment::updateOrCreate(
+        ['order_id' => $order->id],
+        [
+            'payment_method' => 'COD',
+            'amount' => $product1->price,
+            'status' => 'PENDING',
+        ]
+    );
+}
     }
 }
