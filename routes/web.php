@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\ProductController;
 Route::get('/', function () {
     return view('welcome');
 });
@@ -16,10 +18,19 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
-// Route cho Admin (được bảo vệ bởi auth và admin middleware)
-Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
+// Nhóm route quản trị BloomGift (Admin)
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', function () {
         return view('admin.dashboard');
-    })->name('admin.dashboard');
+    })->name('dashboard');
+
+    // Quản lý danh mục (CRUD)
+    Route::resource('categories', CategoryController::class);
+
+    // Quản lý người dùng & Khóa/Mở tài khoản
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::patch('/users/{user}/toggle', [UserController::class, 'toggleStatus'])->name('users.toggle');
+
+    Route::resource('products', ProductController::class);
 });
 require __DIR__ . '/auth.php';
