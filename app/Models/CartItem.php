@@ -14,10 +14,13 @@ class CartItem extends Model
         'user_id',
         'product_id',
         'quantity',
+        'price',
+        'subtotal',
     ];
 
-    public function product()
-    {
-        return $this->belongsTo(Product::class);
-    }
+    protected $casts = [
+        'quantity' => 'integer',
+        'price' => 'decimal:2',
+        'subtotal' => 'decimal:2',
+    ];
 }
