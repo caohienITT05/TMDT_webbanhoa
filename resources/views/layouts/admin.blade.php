@@ -5,45 +5,56 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name', 'BloomGift') }} - Admin Portal</title>
+    <title>{{ config('app.name', 'BloomGift') }} - Quản Trị Cửa Hàng Hoa</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-<body class="bg-gray-100 font-sans antialiased">
+<body class="bg-[#fff5f7] font-sans antialiased text-gray-700">
     <div class="min-h-screen flex">
-        <!-- Sidebar -->
-        <aside class="w-64 bg-slate-900 text-slate-100 flex flex-col shrink-0">
-            <div class="p-5 text-xl font-bold border-b border-slate-800 text-rose-400 flex items-center gap-2">
-                🌸 BloomGift Admin
+        <!-- Sidebar Hồng Pastel -->
+        <aside class="w-64 bg-white border-r border-rose-100 flex flex-col justify-between shrink-0 shadow-sm relative">
+            <div>
+                <!-- Logo BloomGift -->
+                <div class="h-16 flex items-center px-6 gap-2 border-b border-rose-100/70">
+                    <span class="text-2xl">🌸</span>
+                    <span class="font-bold text-lg text-rose-500 tracking-wide">BloomGift Admin</span>
+                </div>
+
+                <!-- Navigation Menu -->
+                <nav class="p-4 space-y-1.5 text-sm font-medium">
+                    <a href="{{ route('admin.dashboard') }}"
+                        class="flex items-center gap-3 px-4 py-2.5 rounded-full transition {{ request()->routeIs('admin.dashboard') ? 'bg-[#ffe2e8] text-rose-600 font-bold shadow-sm' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-500' }}">
+                        <span>📊</span> Bảng điều khiển
+                    </a>
+                    <a href="{{ route('admin.categories.index') }}"
+                        class="flex items-center gap-3 px-4 py-2.5 rounded-full transition {{ request()->routeIs('admin.categories.*') ? 'bg-[#ffe2e8] text-rose-600 font-bold shadow-sm' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-500' }}">
+                        <span>🏷️</span> Quản lý danh mục
+                    </a>
+                    <a href="{{ route('admin.users.index') }}"
+                        class="flex items-center gap-3 px-4 py-2.5 rounded-full transition {{ request()->routeIs('admin.users.*') ? 'bg-[#ffe2e8] text-rose-600 font-bold shadow-sm' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-500' }}">
+                        <span>👥</span> Quản lý người dùng
+                    </a>
+                    <a href="{{ route('admin.products.index') }}"
+                        class="flex items-center gap-3 px-4 py-2.5 rounded-full transition {{ request()->routeIs('admin.products.*') ? 'bg-[#ffe2e8] text-rose-600 font-bold shadow-sm' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-500' }}">
+                        <span>💐</span> Quản lý sản phẩm
+                    </a>
+                    <a href="{{ route('admin.orders.index') }}"
+                        class="flex items-center gap-3 px-4 py-2.5 rounded-full transition {{ request()->routeIs('admin.orders.*') ? 'bg-[#ffe2e8] text-rose-600 font-bold shadow-sm' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-500' }}">
+                        <span>🛒</span> Quản lý đơn hàng
+                    </a>
+                </nav>
             </div>
-            <nav class="flex-1 p-4 space-y-1 text-sm font-medium">
-                <a href="{{ route('admin.dashboard') }}"
-                    class="flex items-center px-4 py-2.5 rounded-lg hover:bg-slate-800 {{ request()->routeIs('admin.dashboard') ? 'bg-slate-800 text-rose-400' : '' }}">
-                    📊 Bảng điều khiển
-                </a>
-                <a href="{{ route('admin.categories.index') }}"
-                    class="flex items-center px-4 py-2.5 rounded-lg hover:bg-slate-800 {{ request()->routeIs('admin.categories.*') ? 'bg-slate-800 text-rose-400' : '' }}">
-                    🏷️ Quản lý danh mục
-                </a>
-                <a href="{{ route('admin.users.index') }}"
-                    class="flex items-center px-4 py-2.5 rounded-lg hover:bg-slate-800 {{ request()->routeIs('admin.users.*') ? 'bg-slate-800 text-rose-400' : '' }}">
-                    👥 Quản lý người dùng
-                </a>
-            </nav>
-            <a href="{{ route('admin.products.index') }}"
-                class="flex items-center px-4 py-2.5 rounded-lg hover:bg-slate-800 {{ request()->routeIs('admin.products.*') ? 'bg-slate-800 text-rose-400 font-bold' : '' }}">
-                💐 Quản lý sản phẩm
-                <a href="{{ route('admin.orders.index') }}"
-                    class="flex items-center px-4 py-2.5 rounded-lg hover:bg-slate-800 {{ request()->routeIs('admin.orders.*') ? 'bg-slate-800 text-rose-400 font-bold' : '' }}">
-                    📦 Quản lý đơn hàng
-                </a>
-            </a>
-            <div class="p-4 border-t border-slate-800">
+
+            <!-- Nút Đăng xuất & Bó hoa trang trí góc dưới -->
+            <div class="p-4 relative">
+                <div class="absolute right-2 bottom-12 opacity-80 pointer-events-none text-4xl select-none">
+                    🌷💐
+                </div>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit"
-                        class="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-800 rounded-lg">
-                        🚪 Đăng xuất
+                        class="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-rose-400 hover:text-rose-600 transition">
+                        <span>🚪</span> Đăng xuất
                     </button>
                 </form>
             </div>
@@ -51,22 +62,44 @@
 
         <!-- Main Content Area -->
         <div class="flex-1 flex flex-col">
-            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 border-b">
-                <h1 class="text-lg font-semibold text-gray-800">@yield('title', 'Quản trị')</h1>
-                <div class="text-sm text-gray-600">
-                    Xin chào, <span class="font-bold text-gray-900">{{ Auth::user()->name }}</span>
+            <!-- Header chuẩn phong cách BloomGift -->
+            <header
+                class="bg-white/80 backdrop-blur h-16 flex items-center justify-between px-8 border-b border-rose-100 shadow-sm sticky top-0 z-10">
+                <div class="flex items-center gap-4">
+                    <button class="text-rose-400 hover:text-rose-600 text-lg">☰</button>
+                    <span
+                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-500 text-xs font-medium border border-rose-100">
+                        🌸 Chào mừng bạn đến với BloomGift Admin
+                    </span>
+                </div>
+                <div class="flex items-center gap-4 text-xs">
+                    <button class="text-gray-400 hover:text-rose-500 relative">
+                        🔔
+                        <span class="w-1.5 h-1.5 bg-rose-500 rounded-full absolute -top-0.5 -right-0.5"></span>
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <span
+                            class="w-7 h-7 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-xs">
+                            🌸
+                        </span>
+                        <span class="text-gray-600">Xin chào, <b
+                                class="text-gray-800">{{ Auth::user()->name }}</b></span>
+                    </div>
                 </div>
             </header>
 
-            <main class="p-8 flex-1">
+            <!-- Nội dung chính -->
+            <main class="p-8 flex-1 space-y-6">
                 @if(session('success'))
-                    <div class="mb-4 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 text-sm rounded shadow-sm">
-                        {{ session('success') }}
+                    <div
+                        class="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl shadow-sm flex items-center gap-2">
+                        <span>✨</span> {{ session('success') }}
                     </div>
                 @endif
                 @if(session('error'))
-                    <div class="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded shadow-sm">
-                        {{ session('error') }}
+                    <div
+                        class="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl shadow-sm flex items-center gap-2">
+                        <span>⚠️</span> {{ session('error') }}
                     </div>
                 @endif
 
