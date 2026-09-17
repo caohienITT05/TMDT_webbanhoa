@@ -11,39 +11,52 @@ class CartController extends Controller
 {
     public function index()
     {
-        $cart = session()->get('cart', []);
+        $cartItems = \App\Models\CartItem::with('product')
+            ->where('user_id', auth()->id())
+            ->get();
 
-        $total = 0;
+        // Tự động tính lại tổng tiền dựa trên giá thực tế của hoa
+        $subtotal = $cartItems->sum(function ($item) {
+            $price = $item->product ? $item->product->price : ($item->price ?? 0);
+            return $price * $item->quantity;
+        });
 
-        foreach ($cart as $item) {
-            $total += $item['price'] * $item['quantity'];
-        }
-
-        return view('cart', compact('cart', 'total'));
+        return view('cart.index', compact('cartItems', 'subtotal'));
     }
 
-    public function add(Request $request, $id)
+    public function add(Request $request)
     {
-        $product = Product::findOrFail($id);
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'quantity' => 'nullable|integer|min:1',
+        ]);
 
-        $cart = session()->get('cart', []);
+        $productId = $request->input('product_id');
+        $quantity = $request->input('quantity', 1);
 
-        if (isset($cart[$id])) {
-            $cart[$id]['quantity']++;
+        // Lấy thông tin hoa thực tế từ database
+        $product = \App\Models\Product::findOrFail($productId);
+
+        $cartItem = \App\Models\CartItem::where('user_id', auth()->id())
+            ->where('product_id', $productId)
+            ->first();
+
+        if ($cartItem) {
+            $cartItem->quantity += $quantity;
+            $cartItem->price = $product->price;
+            $cartItem->subtotal = $cartItem->quantity * $product->price;
+            $cartItem->save();
         } else {
-            $cart[$id] = [
-                'name' => $product->name,
-                'price' => (float) $product->price,
-                'quantity' => 1,
-                'image' => $product->image,
-            ];
+            \App\Models\CartItem::create([
+                'user_id' => auth()->id(),
+                'product_id' => $productId,
+                'quantity' => $quantity,
+                'price' => $product->price,
+                'subtotal' => $quantity * $product->price,
+            ]);
         }
 
-        session()->put('cart', $cart);
-
-        return redirect()
-            ->route('cart.index')
-            ->with('success', 'Đã thêm sản phẩm vào giỏ hàng!');
+        return redirect()->route('cart.index')->with('success', 'Đã thêm sản phẩm vào giỏ hàng!');
     }
 
     public function remove($id)

@@ -2,12 +2,19 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\CheckoutController;
 
-// Controllers Quản trị của TV1
+// 1. Controllers Quản trị (TV1)
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+
+// 2. Controllers Giỏ hàng & Dịch vụ quà tặng (TV3)
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\VoucherController;
+use App\Http\Controllers\GiftController;
+use App\Http\Controllers\ShippingController;
 
 // Models
 use App\Models\Category;
@@ -21,14 +28,14 @@ use App\Models\User;
 |--------------------------------------------------------------------------
 */
 
-// 1. Trang chủ
+// Trang chủ
 Route::get('/', function () {
     $products = Product::where('is_active', true)->latest()->take(8)->get();
     $categories = Category::all();
     return view('Customer.home', compact('products', 'categories'));
 })->name('home');
 
-// 2. Danh mục hoa
+// Danh mục hoa
 Route::get('/danh-muc', function () {
     $categories = Category::withCount('products')->get();
     return view('Customer.categories', compact('categories'));
@@ -45,7 +52,7 @@ Route::get('/danh-muc/{slug}', function ($slug) {
     return view('Customer.products', compact('products', 'categories', 'category'));
 })->name('categories.show');
 
-// 3. Danh sách sản phẩm hoa & Bộ lọc
+// Danh sách sản phẩm hoa & Bộ lọc
 Route::get('/san-pham', function () {
     $query = Product::where('is_active', true);
 
@@ -66,32 +73,28 @@ Route::get('/products', function () {
     return redirect()->route('products.index');
 })->name('products');
 
-// 4. Chi tiết hoa
-Route::get('/san-pham/{slug}', function ($slug) {
+/// Chi tiết hoa (Hỗ trợ cả route name 'product.detail' và 'products.show')
+$showProduct = function ($slug) {
     $product = Product::where('slug', $slug)->orWhere('id', $slug)->firstOrFail();
     $relatedProducts = Product::where('category_id', $product->category_id)
         ->where('id', '!=', $product->id)
         ->take(4)
         ->get();
     return view('Customer.product-detail', compact('product', 'relatedProducts'));
-})->name('products.show');
+};
 
-Route::get('/chi-tiet/{slug}', function ($slug) {
-    return redirect()->route('products.show', $slug);
-})->name('product.detail');
+Route::get('/san-pham/{slug}', $showProduct)->name('product.detail');
+Route::get('/chi-tiet-hoa/{slug}', $showProduct)->name('products.show');
 
-// 5. Yêu thích sản phẩm (Đã truyền đầy đủ $products & $categories để tránh lỗi undefined)
+// Yêu thích sản phẩm
 Route::get('/yeu-thich', function () {
     $favoriteIds = session()->get('favorites', []);
-    
     $products = Product::where('is_active', true)
         ->when(!empty($favoriteIds), function ($query) use ($favoriteIds) {
             $query->whereIn('id', $favoriteIds);
         })
         ->paginate(12);
-
     $categories = Category::all();
-
     return view('Customer.favorites', compact('products', 'categories'));
 })->name('favorites.index');
 
@@ -136,25 +139,7 @@ Route::any('/yeu-thich/toggle/{id?}', function ($id = null) {
     return back()->with('success', 'Đã cập nhật danh sách yêu thích!');
 })->name('favorites.toggle');
 
-// 6. Giỏ hàng & Đặt hàng theo yêu cầu (Đã truyền sẵn $cart và $products gợi ý)
-Route::get('/gio-hang', function () {
-    $cart = session()->get('cart', []);
-    $products = Product::where('is_active', true)->take(4)->get();
-    return view('Customer.cart', compact('cart', 'products'));
-})->name('cart.index');
-
-Route::get('/cart', function () {
-    return redirect()->route('cart.index');
-})->name('cart');
-
-Route::any('/gio-hang/them/{id?}', function ($id = null) {
-    return back()->with('success', 'Đã thêm hoa vào giỏ hàng!');
-})->name('cart.add');
-
-Route::any('/gio-hang/xoa/{id?}', function ($id = null) {
-    return back()->with('success', 'Đã xóa sản phẩm khỏi giỏ hàng!');
-})->name('cart.remove');
-
+// Đặt hoa theo yêu cầu
 Route::get('/dat-hoa-theo-yeu-cau', function () {
     return view('Customer.custom-order');
 })->name('custom.order');
@@ -166,6 +151,41 @@ Route::get('/custom-order', function () {
 Route::post('/dat-hoa-theo-yeu-cau', function () {
     return back()->with('success', 'BloomGift đã tiếp nhận yêu cầu cắm hoa riêng của bạn!');
 })->name('custom.order.store');
+
+/*
+|--------------------------------------------------------------------------
+| PHÂN HỆ GIỎ HÀNG, VOUCHER, QUÀ TẶNG & THANH TOÁN (TV3)
+|--------------------------------------------------------------------------
+*/
+// Phân hệ giỏ hàng (Hỗ trợ cả GET, POST và tham số {id})
+Route::prefix('cart')->name('cart.')->group(function () {
+    Route::get('/', [CartController::class, 'index'])->name('index');
+    Route::match(['get', 'post'], '/add/{id?}', [CartController::class, 'add'])->name('add');
+    Route::patch('/update/{id}', [CartController::class, 'update'])->name('update');
+    Route::delete('/remove/{id}', [CartController::class, 'remove'])->name('remove');
+});
+
+// Route bí danh tương thích cho TV2
+Route::match(['get', 'post'], '/gio-hang/them/{id?}', [CartController::class, 'add'])->name('cart.add.alias');
+Route::get('/gio-hang', [CartController::class, 'index'])->name('cart');
+Route::get('/gio-hang', [CartController::class, 'index'])->name('cart');
+
+// Mã giảm giá (Voucher)
+Route::post('/voucher/apply', [VoucherController::class, 'apply'])->name('voucher.apply');
+Route::any('/voucher/remove', [VoucherController::class, 'remove'])->name('voucher.remove');
+
+// Quà tặng & Thiệp đính kèm (Khắc phục lỗi gift.save)
+Route::post('/gift/save', [GiftController::class, 'save'])->name('gift.save');
+Route::any('/gift/remove', [GiftController::class, 'remove'])->name('gift.remove');
+
+// Vận chuyển & Giao hàng (TV3)
+Route::post('/shipping/calculate', [ShippingController::class, 'calculate'])->name('shipping.calculate');
+Route::post('/shipping/save', [ShippingController::class, 'save'])->name('shipping.save');
+
+// Phân hệ Thanh toán (Checkout)
+Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+Route::post('/checkout', [CheckoutController::class, 'process'])->name('checkout.process');
+Route::get('/thanh-toan', [CheckoutController::class, 'index'])->name('checkout');
 
 /*
 |--------------------------------------------------------------------------
