@@ -8,43 +8,53 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Danh sách đơn hàng.
+     */
+    public function index()
     {
-        $query = Order::with(['user', 'deliverySlot'])->latest();
-
-        // Lọc theo trạng thái đơn
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Tìm kiếm theo tên hoặc SĐT người nhận
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('recipient_name', 'like', '%' . $request->search . '%')
-                    ->orWhere('recipient_phone', 'like', '%' . $request->search . '%');
-            });
-        }
-
-        $orders = $query->paginate(10)->withQueryString();
+        $orders = Order::with([
+            'deliverySlot',
+            'payment',
+        ])
+        ->latest()
+        ->paginate(10);
 
         return view('admin.orders.index', compact('orders'));
     }
 
+    /**
+     * Chi tiết đơn hàng.
+     */
     public function show(Order $order)
     {
-        $order->load(['user', 'items.product', 'deliverySlot', 'payment']);
+        $order->load([
+            'items',
+            'deliverySlot',
+            'payment',
+        ]);
+
         return view('admin.orders.show', compact('order'));
     }
 
+    /**
+     * Cập nhật trạng thái đơn hàng.
+     */
     public function updateStatus(Request $request, Order $order)
     {
-        $request->validate([
-            'status' => 'required|in:PENDING,CONFIRMED,PREPARING,SHIPPING,COMPLETED,CANCELLED',
+        $validated = $request->validate([
+            'order_status' => [
+                'required',
+                'in:pending,confirmed,processing,shipping,completed,cancelled',
+            ],
         ]);
 
-        $order->status = $request->status;
-        $order->save();
+        $order->update([
+            'order_status' => $validated['order_status'],
+        ]);
 
-        return back()->with('success', "Đã cập nhật trạng thái đơn #{$order->id} thành công!");
+        return redirect()
+            ->back()
+            ->with('success', 'Cập nhật trạng thái đơn hàng thành công.');
     }
 }

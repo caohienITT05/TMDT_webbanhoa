@@ -19,36 +19,33 @@
         }
 
         .container {
-            width: 92%;
-            max-width: 1150px;
+            width: 90%;
+            max-width: 1100px;
             margin: 40px auto;
         }
 
-        .page-title {
+        h1 {
             text-align: center;
             margin-bottom: 30px;
-            color: #222;
         }
 
         .checkout {
             display: grid;
             grid-template-columns: 2fr 1fr;
             gap: 25px;
-            align-items: start;
         }
 
         .box {
-            background: #fff;
+            background: white;
             padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
             margin-bottom: 20px;
         }
 
         .box h2 {
-            margin: 0 0 20px;
+            margin-top: 0;
             font-size: 20px;
-            color: #222;
         }
 
         .form-group {
@@ -58,141 +55,67 @@
         label {
             display: block;
             margin-bottom: 7px;
-            font-weight: 700;
+            font-weight: bold;
         }
 
         input,
         select,
         textarea {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
+            padding: 11px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
             font-size: 15px;
-            background: #fff;
-        }
-
-        input:focus,
-        select:focus,
-        textarea:focus {
-            outline: none;
-            border-color: #e11d48;
-            box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.1);
         }
 
         textarea {
-            min-height: 95px;
+            min-height: 90px;
             resize: vertical;
         }
 
-        .required {
-            color: #dc2626;
-        }
-
         .payment-option {
-            margin-bottom: 14px;
-        }
-
-        .payment-option label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 500;
-            cursor: pointer;
+            margin-bottom: 12px;
         }
 
         .payment-option input {
             width: auto;
-            margin: 0;
-        }
-
-        .summary-product {
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
-        }
-
-        .summary-product-name {
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 4px;
-        }
-
-        .summary-product-detail {
-            display: flex;
-            justify-content: space-between;
-            gap: 15px;
-            color: #666;
-            font-size: 14px;
+            margin-right: 8px;
         }
 
         .summary-item {
             display: flex;
             justify-content: space-between;
-            gap: 20px;
-            padding: 9px 0;
-            font-size: 15px;
+            padding: 8px 0;
         }
 
         .total {
             border-top: 1px solid #ddd;
-            margin-top: 12px;
-            padding-top: 16px;
+            margin-top: 15px;
+            padding-top: 15px;
             font-size: 20px;
-            font-weight: 700;
-            color: #be123c;
+            font-weight: bold;
         }
 
-        .btn-submit {
+        button {
             width: 100%;
             padding: 14px;
-            margin-top: 15px;
             border: none;
-            border-radius: 8px;
-            background: #111827;
+            border-radius: 7px;
+            background: #222;
             color: white;
             font-size: 16px;
-            font-weight: 700;
             cursor: pointer;
         }
 
-        .btn-submit:hover {
-            background: #374151;
+        button:hover {
+            background: #444;
         }
 
-        .alert-error {
-            background: #fee2e2;
-            color: #991b1b;
-            padding: 14px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .empty-cart {
-            background: #f9fafb;
-            border: 1px dashed #d1d5db;
-            padding: 18px;
-            border-radius: 8px;
-            color: #6b7280;
-        }
-
-        .back-link {
-            display: inline-block;
-            margin-bottom: 20px;
-            color: #be123c;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
+        .required {
+            color: red;
         }
 
         @media (max-width: 768px) {
-            .container {
-                width: 94%;
-                margin: 20px auto;
-            }
-
             .checkout {
                 grid-template-columns: 1fr;
             }
@@ -204,31 +127,7 @@
 
 <div class="container">
 
-    <a href="{{ url()->previous() }}" class="back-link">
-        ← Quay lại
-    </a>
-
-    <h1 class="page-title">
-        🌸 BloomGift - Thanh toán
-    </h1>
-
-    @if(session('error'))
-        <div class="alert-error">
-            {{ session('error') }}
-        </div>
-    @endif
-
-    @if($errors->any())
-        <div class="alert-error">
-            <strong>Vui lòng kiểm tra:</strong>
-
-            <ul style="margin: 8px 0 0 20px;">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+    <h1>🌸 BloomGift - Thanh toán</h1>
 
     <form action="{{ route('checkout.store') }}" method="POST">
 
@@ -239,9 +138,7 @@
             <!-- LEFT -->
             <div>
 
-                <!-- THÔNG TIN NGƯỜI NHẬN -->
                 <div class="box">
-
                     <h2>1. Thông tin người nhận</h2>
 
                     <div class="form-group">
@@ -252,7 +149,6 @@
                         <input
                             type="text"
                             name="recipient_name"
-                            value="{{ old('recipient_name') }}"
                             placeholder="Nhập họ tên người nhận"
                             required
                         >
@@ -266,7 +162,6 @@
                         <input
                             type="text"
                             name="recipient_phone"
-                            value="{{ old('recipient_phone') }}"
                             placeholder="Nhập số điện thoại"
                             required
                         >
@@ -281,29 +176,23 @@
                             name="recipient_address"
                             placeholder="Nhập địa chỉ nhận hàng"
                             required
-                        >{{ old('recipient_address') }}</textarea>
+                        ></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label>
-                            Ghi chú
-                        </label>
+                        <label>Ghi chú</label>
 
                         <textarea
                             name="note"
-                            placeholder="Ví dụ: Gọi trước khi giao, giao tại quầy lễ tân..."
-                        >{{ old('note') }}</textarea>
+                            placeholder="Ví dụ: Giao vào buổi tối, gọi trước khi giao..."
+                        ></textarea>
                     </div>
-
                 </div>
 
-                <!-- THỜI GIAN GIAO -->
                 <div class="box">
-
                     <h2>2. Thời gian giao hàng</h2>
 
                     <div class="form-group">
-
                         <label>
                             Ngày giao <span class="required">*</span>
                         </label>
@@ -311,23 +200,17 @@
                         <input
                             type="date"
                             name="delivery_date"
-                            value="{{ old('delivery_date') }}"
                             min="{{ date('Y-m-d') }}"
                             required
                         >
-
                     </div>
 
                     <div class="form-group">
-
                         <label>
                             Khung giờ giao <span class="required">*</span>
                         </label>
 
-                        <select
-                            name="delivery_slot_id"
-                            required
-                        >
+                        <select name="delivery_slot_id" required>
 
                             <option value="">
                                 -- Chọn khung giờ --
@@ -335,39 +218,33 @@
 
                             @foreach($deliverySlots as $slot)
 
-                                <option
-                                    value="{{ $slot->id }}"
-                                    {{ old('delivery_slot_id') == $slot->id ? 'selected' : '' }}
-                                >
+                                <option value="{{ $slot->id }}">
                                     {{ $slot->name }}
+                                    ({{ substr($slot->start_time, 0, 5) }}
+                                    -
+                                    {{ substr($slot->end_time, 0, 5) }})
                                 </option>
 
                             @endforeach
 
                         </select>
-
                     </div>
-
                 </div>
 
-                <!-- THANH TOÁN -->
                 <div class="box">
-
                     <h2>3. Phương thức thanh toán</h2>
 
                     <div class="payment-option">
 
                         <label>
-
                             <input
                                 type="radio"
                                 name="payment_method"
                                 value="cod"
-                                {{ old('payment_method', 'cod') === 'cod' ? 'checked' : '' }}
+                                checked
                             >
 
                             Thanh toán khi nhận hàng (COD)
-
                         </label>
 
                     </div>
@@ -375,20 +252,16 @@
                     <div class="payment-option">
 
                         <label>
-
                             <input
                                 type="radio"
                                 name="payment_method"
                                 value="paypal"
-                                {{ old('payment_method') === 'paypal' ? 'checked' : '' }}
                             >
 
                             Thanh toán bằng PayPal
-
                         </label>
 
                     </div>
-
                 </div>
 
             </div>
@@ -398,110 +271,61 @@
 
                 <div class="box">
 
-                    <h2>4. Đơn hàng</h2>
-
-                    @forelse($products as $product)
-
-                        <div class="summary-product">
-
-                            <div class="summary-product-name">
-                                {{ $product->name }}
-                            </div>
-
-                            <div class="summary-product-detail">
-
-                                <span>
-                                    {{ $product->checkout_quantity }} ×
-                                    {{ number_format(
-                                        (float) $product->checkout_price,
-                                        0,
-                                        ',',
-                                        '.'
-                                    ) }}đ
-                                </span>
-
-                                <strong>
-                                    {{ number_format(
-                                        (float) $product->checkout_price
-                                        * $product->checkout_quantity,
-                                        0,
-                                        ',',
-                                        '.'
-                                    ) }}đ
-                                </strong>
-
-                            </div>
-
-                        </div>
-
-                    @empty
-
-                        <div class="empty-cart">
-                            Không có sản phẩm trong đơn hàng.
-                        </div>
-
-                    @endforelse
+                    <h2>Đơn hàng</h2>
 
                     <div class="summary-item">
+                        <span>Hoa hồng đỏ × 1</span>
+                        <span>350.000đ</span>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>Hoa baby × 1</span>
+                        <span>150.000đ</span>
+                    </div>
+
+                    <div class="summary-item">
+
                         <span>Tạm tính</span>
 
-                        <strong>
-                            {{ number_format(
-                                (float) $subtotal,
-                                0,
-                                ',',
-                                '.'
-                            ) }}đ
-                        </strong>
+                        <span>
+                            500.000đ
+                        </span>
+
                     </div>
 
                     <div class="summary-item">
+
                         <span>Phí giao hàng</span>
 
-                        <strong>
-                            {{ number_format(
-                                (float) $shippingFee,
-                                0,
-                                ',',
-                                '.'
-                            ) }}đ
-                        </strong>
+                        <span>
+                            30.000đ
+                        </span>
+
                     </div>
 
                     <div class="summary-item">
+
                         <span>Giảm giá</span>
 
-                        <strong>
-                            {{ number_format(
-                                (float) $discount,
-                                0,
-                                ',',
-                                '.'
-                            ) }}đ
-                        </strong>
+                        <span>
+                            0đ
+                        </span>
+
                     </div>
 
                     <div class="summary-item total">
 
-                        <span>
-                            Tổng cộng
-                        </span>
+                        <span>Tổng cộng</span>
 
-                        <strong>
-                            {{ number_format(
-                                (float) $total,
-                                0,
-                                ',',
-                                '.'
-                            ) }}đ
-                        </strong>
+                        <span>
+                            530.000đ
+                        </span>
 
                     </div>
 
-                    <button
-                        type="submit"
-                        class="btn-submit"
-                    >
+                    <br>
+
+                    <button type="submit">
                         Đặt hàng
                     </button>
 

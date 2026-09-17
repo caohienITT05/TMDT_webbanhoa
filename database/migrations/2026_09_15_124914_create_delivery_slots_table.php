@@ -5,18 +5,19 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('delivery_slots', function (Blueprint $table) {
-            $table->id();
-            $table->string('time_range');
-            $table->integer('max_orders')->default(20);
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('delivery_slots')) {
+            Schema::create('delivery_slots', function (Blueprint $table) {
+                $table->id();
+                $table->string('name');
+                $table->time('start_time');
+                $table->time('end_time');
+                $table->unsignedInteger('max_orders')->default(10);
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

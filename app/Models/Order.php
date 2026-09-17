@@ -12,48 +12,60 @@ class Order extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'user_id',
-        'delivery_slot_id',
-        'gift_card_id',
-        'gift_wrap_id',
-        'voucher_id',
-        'recipient_name',
-        'recipient_phone',
-        'recipient_address',
-        'delivery_date',
-        'card_message',
-        'order_note',
-        'subtotal',
-        'discount_amount',
-        'total_amount',
-        'status',
-    ];
+    protected $guarded = [];
 
     protected $casts = [
         'delivery_date' => 'date',
         'subtotal' => 'decimal:2',
+        'discount' => 'decimal:2',
         'discount_amount' => 'decimal:2',
+        'shipping_fee' => 'decimal:2',
+        'total' => 'decimal:2',
         'total_amount' => 'decimal:2',
     ];
 
+    /**
+     * Khách hàng đặt hoa
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function items(): HasMany
-    {
-        return $this->hasMany(OrderItem::class);
-    }
-
+    /**
+     * Khung giờ giao hàng
+     */
     public function deliverySlot(): BelongsTo
     {
         return $this->belongsTo(DeliverySlot::class);
     }
 
+    /**
+     * Danh sách sản phẩm hoa trong đơn hàng
+     */
+    public function items(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * Bí danh tương thích cho phần Admin
+     */
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * Thông tin thanh toán (PayPal / COD)
+     */
     public function payment(): HasOne
     {
-        return $this->hasOne(Payment::class);
+        return $this->hasOne(Payment::class)->latestOfMany();
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 }
