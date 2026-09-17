@@ -1,6 +1,6 @@
-# 🌸 BloomGift – Hoa Tươi & Quà Tặng
+# 🌸 BloomGift – Hoa Tươi & Hoa dịp lễ
 
-> **Website thương mại điện tử B2C chuyên cung cấp hoa tươi và quà tặng theo dịp lễ.**
+> **Website thương mại điện tử B2C chuyên cung cấp hoa tươi và hoa theo dịp lễ.**
 
 BloomGift là một website thương mại điện tử được xây dựng nhằm hỗ trợ khách hàng **tìm kiếm, lựa chọn và đặt mua hoa tươi và quà tặng trực tuyến** cho các dịp đặc biệt như sinh nhật, Valentine, 8/3, 20/10, lễ tốt nghiệp, kỷ niệm, khai trương,...
 
