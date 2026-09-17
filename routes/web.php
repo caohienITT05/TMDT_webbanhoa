@@ -2,19 +2,42 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\ProductController;
 
-use App\Http\Controllers\Admin\OrderController;
-
+// Controllers Quản trị của bạn (TV1)
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
-Route::get('/', function () {
-    return view('welcome');
-});
 
+// Controllers Khách hàng của TV2 (Sản phẩm & Danh mục)
+use App\Http\Controllers\CategoryController as CustomerCategoryController;
+// (Nếu TV2 để trong thư mục Customer, Laravel sẽ tự tìm theo namespace)
+
+/*
+|--------------------------------------------------------------------------
+| GIAO DIỆN KHÁCH HÀNG (TV2)
+|--------------------------------------------------------------------------
+*/
+// Nối thẳng trang chủ hiển thị danh sách hoa của TV2
+Route::get('/', function () {
+    $products = Product::where('is_active', true)->latest()->take(8)->get();
+    return view('welcome', compact('products'));
+})->name('home');
+
+// Xem sản phẩm & danh mục phía người mua (TV2)
+Route::get('/san-pham', function () {
+    $products = Product::where('is_active', true)->paginate(12);
+    return view('Customer.index', compact('products'));
+})->name('products.index');
+
+/*
+|--------------------------------------------------------------------------
+| TÀI KHOẢN & BREEZE AUTH (TV1)
+|--------------------------------------------------------------------------
+*/
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -24,7 +47,12 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
-// Nhóm route quản trị BloomGift (Admin)
+
+/*
+|--------------------------------------------------------------------------
+| PHÂN HỆ QUẢN TRỊ VIÊN - ADMIN PORTAL (TV1)
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', function () {
         $totalRevenue = Order::where('status', 'COMPLETED')->sum('total_amount');
@@ -44,15 +72,14 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         ));
     })->name('dashboard');
 
-    Route::resource('categories', CategoryController::class);
-    Route::resource('products', ProductController::class);
-    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
-    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::patch('/users/{user}/toggle', [UserController::class, 'toggleStatus'])->name('users.toggle');
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
-    Route::patch('/users/{user}/toggle', [UserController::class, 'toggleStatus'])->name('users.toggle');
+    Route::resource('categories', AdminCategoryController::class);
+    Route::resource('products', AdminProductController::class);
+    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+    Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.update-status');
+    Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+    Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
+    Route::patch('/users/{user}/toggle', [AdminUserController::class, 'toggleStatus'])->name('users.toggle');
 });
+
 require __DIR__ . '/auth.php';
