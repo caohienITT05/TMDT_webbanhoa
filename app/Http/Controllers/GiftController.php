@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\GiftCard;
+use App\Models\GiftWrap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 
@@ -9,56 +11,122 @@ class GiftController extends Controller
 {
     /**
      * Lưu lựa chọn thiệp và gói quà.
+     *
+     * Giá được lấy trực tiếp từ database.
      */
     public function save(Request $request)
     {
         $request->validate([
-            'gift_card' => 'required|in:none,card',
+            'gift_card_id' => 'nullable|integer',
             'gift_message' => 'nullable|string|max:500',
-            'gift_wrap' => 'required|in:none,basic,premium',
+            'gift_wrap_id' => 'nullable|integer',
         ]);
 
         /*
-         * Tính phí thiệp.
-         *
-         * Không chọn thiệp = 0đ
-         * Thiệp chúc = 10.000đ
+         * ================================
+         * THIỆP
+         * ================================
          */
+
+        $giftCardId = null;
         $giftCardFee = 0;
 
-        if ($request->gift_card === 'card') {
-            $giftCardFee = 10000;
+        if ($request->filled('gift_card_id')) {
+            $giftCard = GiftCard::where(
+                'id',
+                $request->gift_card_id
+            )
+                ->where('is_active', true)
+                ->first();
+
+            if (!$giftCard) {
+                return redirect()
+                    ->back()
+                    ->with(
+                        'gift_error',
+                        'Thiệp đã chọn không tồn tại hoặc không còn hoạt động.'
+                    );
+            }
+
+            $giftCardId = $giftCard->id;
+            $giftCardFee = (float) $giftCard->price;
         }
 
         /*
-         * Tính phí gói quà.
-         *
-         * Không gói = 0đ
-         * Gói cơ bản = 20.000đ
-         * Gói cao cấp = 30.000đ
+         * ================================
+         * GÓI QUÀ
+         * ================================
          */
+
+        $giftWrapId = null;
         $giftWrapFee = 0;
 
-        if ($request->gift_wrap === 'basic') {
-            $giftWrapFee = 20000;
-        } elseif ($request->gift_wrap === 'premium') {
-            $giftWrapFee = 30000;
+        if ($request->filled('gift_wrap_id')) {
+            $giftWrap = GiftWrap::where(
+                'id',
+                $request->gift_wrap_id
+            )
+                ->where('is_active', true)
+                ->first();
+
+            if (!$giftWrap) {
+                return redirect()
+                    ->back()
+                    ->with(
+                        'gift_error',
+                        'Gói quà đã chọn không tồn tại hoặc không còn hoạt động.'
+                    );
+            }
+
+            $giftWrapId = $giftWrap->id;
+            $giftWrapFee = (float) $giftWrap->price;
         }
 
         /*
-         * Lưu vào Session để CartController
-         * sử dụng khi tính tổng tiền.
+         * ================================
+         * LƯU SESSION
+         * ================================
          */
-        Session::put('gift_card', $request->gift_card);
-        Session::put('gift_message', trim($request->gift_message ?? ''));
-        Session::put('gift_card_fee', $giftCardFee);
 
-        Session::put('gift_wrap', $request->gift_wrap);
-        Session::put('gift_wrap_fee', $giftWrapFee);
+        Session::put(
+            'gift_card_id',
+            $giftCardId
+        );
+
+        Session::put(
+            'gift_card_fee',
+            round(
+                max($giftCardFee, 0),
+                2
+            )
+        );
+
+        Session::put(
+            'gift_message',
+            trim(
+                $request->gift_message ?? ''
+            )
+        );
+
+        Session::put(
+            'gift_wrap_id',
+            $giftWrapId
+        );
+
+        Session::put(
+            'gift_wrap_fee',
+            round(
+                max($giftWrapFee, 0),
+                2
+            )
+        );
 
         return redirect()
             ->back()
-            ->with('gift_success', 'Đã lưu lựa chọn thiệp và gói quà!');
+            ->with(
+                'gift_success',
+                'Đã lưu lựa chọn thiệp và gói quà!'
+            );
     }
 
     /**
@@ -67,15 +135,18 @@ class GiftController extends Controller
     public function remove()
     {
         Session::forget([
-            'gift_card',
-            'gift_message',
+            'gift_card_id',
             'gift_card_fee',
-            'gift_wrap',
+            'gift_message',
+            'gift_wrap_id',
             'gift_wrap_fee',
         ]);
 
         return redirect()
             ->back()
-            ->with('gift_success', 'Đã hủy lựa chọn thiệp và gói quà.');
+            ->with(
+                'gift_success',
+                'Đã hủy lựa chọn thiệp và gói quà.'
+            );
     }
 }

@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\CartItem;
+use App\Models\GiftCard;
+use App\Models\GiftWrap;
+use App\Models\Product;
+use App\Models\ShippingMethod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -10,25 +14,37 @@ use Illuminate\Support\Facades\Session;
 class CartController extends Controller
 {
     /**
-     * Lấy các CartItem của người dùng hiện tại.
+     * Lấy CartItem của người dùng hiện tại.
      */
     private function getCartQuery()
     {
+        $query = CartItem::query();
+
         if (Auth::check()) {
-            return CartItem::where('user_id', Auth::id());
+            $query->where('user_id', Auth::id());
+        } else {
+            $query->where('session_id', Session::getId());
         }
 
-        return CartItem::where(
-            'session_id',
-            Session::getId()
+        return $query;
+    }
+
+    /**
+     * Lấy giá hiện tại của sản phẩm.
+     */
+    private function getProductPrice(Product $product): float
+    {
+        return round(
+            (float) (
+                $product->sale_price
+                ?? $product->price
+            ),
+            2
         );
     }
 
-
     /**
-     * Tính toàn bộ tiền trong giỏ hàng.
-     *
-     * Công thức:
+     * Tính tổng tiền giỏ hàng.
      *
      * subtotal
      * - discount
@@ -39,54 +55,42 @@ class CartController extends Controller
      */
     private function getCartTotals($cartItems): array
     {
-        /*
-         * =========================
-         * 1. TẠM TÍNH SẢN PHẨM
-         * =========================
-         */
-
         $subtotal = 0;
 
         foreach ($cartItems as $item) {
-
             $price = (float) $item->price;
-
             $quantity = (int) $item->quantity;
 
-            $itemSubtotal = (float) $item->subtotal;
-
-
             /*
-             * Nếu subtotal chưa có nhưng
-             * price có giá trị thì tự tính lại.
+             * Đồng bộ giá hiện tại từ Product.
              */
-            if (
-                $itemSubtotal <= 0 &&
-                $price > 0
-            ) {
-                $itemSubtotal =
-                    $price * $quantity;
+            if ($item->product) {
+                $price = $this->getProductPrice(
+                    $item->product
+                );
             }
 
+            $itemSubtotal = $price * $quantity;
 
-            $item->calculated_subtotal =
-                round($itemSubtotal, 2);
+            $item->calculated_price = round(
+                $price,
+                2
+            );
 
+            $item->calculated_subtotal = round(
+                $itemSubtotal,
+                2
+            );
 
             $subtotal += $itemSubtotal;
         }
 
-
-        $subtotal = round(
-            $subtotal,
-            2
-        );
-
+        $subtotal = round($subtotal, 2);
 
         /*
-         * =========================
-         * 2. VOUCHER
-         * =========================
+         * ================================
+         * VOUCHER
+         * ================================
          */
 
         $discount = (float) Session::get(
@@ -94,113 +98,146 @@ class CartController extends Controller
             0
         );
 
-
-        /*
-         * Không cho discount lớn hơn subtotal.
-         */
         $discount = min(
-            $discount,
+            max($discount, 0),
             $subtotal
         );
-
-
-        /*
-         * Không cho discount âm.
-         */
-        $discount = max(
-            $discount,
-            0
-        );
-
 
         $discount = round(
             $discount,
             2
         );
 
-
         /*
-         * =========================
-         * 3. THIỆP
-         * =========================
+         * ================================
+         * THIỆP
+         * ================================
          */
 
-        $giftCardFee = (float) Session::get(
-            'gift_card_fee',
-            0
+        $giftCardFee = 0;
+
+        $giftCardId = Session::get(
+            'gift_card_id'
         );
 
+        if ($giftCardId) {
+            $giftCard = GiftCard::where(
+                'id',
+                $giftCardId
+            )
+                ->where('is_active', true)
+                ->first();
 
-        $giftCardFee = max(
-            $giftCardFee,
-            0
-        );
+            if ($giftCard) {
+                $giftCardFee = (float) $giftCard->price;
 
+                Session::put(
+                    'gift_card_fee',
+                    round($giftCardFee, 2)
+                );
+            } else {
+                Session::forget([
+                    'gift_card_id',
+                    'gift_card_fee',
+                ]);
+            }
+        }
 
         $giftCardFee = round(
-            $giftCardFee,
+            max($giftCardFee, 0),
             2
         );
 
-
         /*
-         * =========================
-         * 4. GÓI QUÀ
-         * =========================
+         * ================================
+         * GÓI QUÀ
+         * ================================
          */
 
-        $giftWrapFee = (float) Session::get(
-            'gift_wrap_fee',
-            0
+        $giftWrapFee = 0;
+
+        $giftWrapId = Session::get(
+            'gift_wrap_id'
         );
 
+        if ($giftWrapId) {
+            $giftWrap = GiftWrap::where(
+                'id',
+                $giftWrapId
+            )
+                ->where('is_active', true)
+                ->first();
 
-        $giftWrapFee = max(
-            $giftWrapFee,
-            0
-        );
+            if ($giftWrap) {
+                $giftWrapFee = (float) $giftWrap->price;
 
+                Session::put(
+                    'gift_wrap_fee',
+                    round($giftWrapFee, 2)
+                );
+            } else {
+                Session::forget([
+                    'gift_wrap_id',
+                    'gift_wrap_fee',
+                ]);
+            }
+        }
 
         $giftWrapFee = round(
-            $giftWrapFee,
+            max($giftWrapFee, 0),
             2
         );
 
-
         /*
-         * =========================
-         * 5. PHÍ VẬN CHUYỂN
-         * =========================
+         * ================================
+         * VẬN CHUYỂN
+         * ================================
          */
 
-        $shippingFee = (float) Session::get(
-            'shipping_fee',
-            0
+        $shippingFee = 0;
+
+        $shippingMethodId = Session::get(
+            'shipping_method_id'
         );
 
+        if ($shippingMethodId) {
+            $shippingMethod = ShippingMethod::where(
+                'id',
+                $shippingMethodId
+            )
+                ->where('is_active', true)
+                ->first();
 
-        $shippingFee = max(
-            $shippingFee,
-            0
-        );
+            if ($shippingMethod) {
+                $shippingFee = (float) $shippingMethod->fee;
 
+                Session::put(
+                    'shipping_fee',
+                    round($shippingFee, 2)
+                );
+
+                Session::put(
+                    'shipping_method_name',
+                    $shippingMethod->name
+                );
+            } else {
+                Session::forget([
+                    'shipping_method_id',
+                    'shipping_fee',
+                    'shipping_method_name',
+                ]);
+            }
+        }
 
         $shippingFee = round(
-            $shippingFee,
+            max($shippingFee, 0),
             2
         );
 
-
         /*
-         * =========================
-         * 6. TỔNG CỘNG
-         * =========================
-         *
-         * subtotal
-         * - discount
-         * + gift card
-         * + gift wrap
-         * + shipping
+         * ================================
+         * TỔNG TIỀN
+         * ================================
          */
 
         $total =
@@ -210,60 +247,69 @@ class CartController extends Controller
             + $giftWrapFee
             + $shippingFee;
 
-
-        /*
-         * Không cho tổng tiền âm.
-         */
-        $total = max(
-            $total,
-            0
-        );
-
-
         $total = round(
-            $total,
+            max($total, 0),
             2
         );
 
-
         return [
-
             'subtotal' => $subtotal,
-
             'discount' => $discount,
-
             'gift_card_fee' => $giftCardFee,
-
             'gift_wrap_fee' => $giftWrapFee,
-
             'shipping_fee' => $shippingFee,
-
             'total' => $total,
-
         ];
     }
-
 
     /**
      * Hiển thị giỏ hàng.
      */
     public function index()
     {
-        $cartItems =
-            $this->getCartQuery()->get();
+        $cartItems = $this->getCartQuery()
+            ->with('product')
+            ->get();
 
+        /*
+         * Lấy dữ liệu từ phần Admin.
+         */
+        $giftCards = GiftCard::where(
+            'is_active',
+            true
+        )
+            ->orderBy('price')
+            ->get();
 
-        $totals =
-            $this->getCartTotals(
-                $cartItems
-            );
+        $giftWraps = GiftWrap::where(
+            'is_active',
+            true
+        )
+            ->orderBy('price')
+            ->get();
 
+        $shippingMethods = ShippingMethod::where(
+            'is_active',
+            true
+        )
+            ->orderBy('fee')
+            ->get();
+
+        $totals = $this->getCartTotals(
+            $cartItems
+        );
 
         return view(
             'cart.index',
             [
-
                 'cartItems' => $cartItems,
+
+                'giftCards' => $giftCards,
+
+                'giftWraps' => $giftWraps,
+
+                'shippingMethods' =>
+                    $shippingMethods,
 
                 'subtotal' =>
                     $totals['subtotal'],
@@ -282,71 +328,70 @@ class CartController extends Controller
 
                 'total' =>
                     $totals['total'],
-
             ]
         );
     }
-
 
     /**
      * Thêm sản phẩm vào giỏ.
      */
     public function add(Request $request)
     {
-        $request->validate([
-            'product_id' => 'required',
-            'quantity' => 'required|integer|min:1',
+        $validated = $request->validate([
+            'product_id' =>
+                'required|integer|exists:products,id',
+
+            'quantity' =>
+                'required|integer|min:1',
         ]);
 
+        $product = Product::where(
+            'id',
+            $validated['product_id']
+        )
+            ->where('is_active', true)
+            ->first();
 
-        $query =
-            $this->getCartQuery()
-                ->where(
-                    'product_id',
-                    $request->product_id
+        if (!$product) {
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'Sản phẩm không còn hoạt động.'
                 );
+        }
 
+        $price = $this->getProductPrice(
+            $product
+        );
 
-        $cartItem =
-            $query->first();
-
+        $cartItem = $this->getCartQuery()
+            ->where(
+                'product_id',
+                $product->id
+            )
+            ->first();
 
         if ($cartItem) {
+            $quantity =
+                (int) $cartItem->quantity
+                + (int) $validated['quantity'];
 
-            /*
-             * Sản phẩm đã có trong giỏ:
-             * tăng số lượng.
-             */
-            $cartItem->increment(
-                'quantity',
-                $request->quantity
-            );
-
-
-            /*
-             * Nếu đã có giá thì cập nhật subtotal.
-             */
-            if (
-                (float) $cartItem->price > 0
-            ) {
-
-                $cartItem->update([
-                    'subtotal' =>
-                        (float) $cartItem->price
-                        *
-                        (int) $cartItem->quantity,
-                ]);
-            }
-
+            $cartItem->update([
+                'quantity' => $quantity,
+                'price' => $price,
+                'subtotal' =>
+                    $price * $quantity,
+            ]);
         } else {
+            $quantity =
+                (int) $validated['quantity'];
 
-            /*
-             * Sản phẩm chưa có trong giỏ.
-             */
             CartItem::create([
-
                 'user_id' =>
-                    Auth::id(),
+                    Auth::check()
+                        ? Auth::id()
+                        : null,
 
                 'session_id' =>
                     Auth::check()
@@ -354,25 +399,18 @@ class CartController extends Controller
                         : Session::getId(),
 
                 'product_id' =>
-                    $request->product_id,
+                    $product->id,
 
                 'quantity' =>
-                    $request->quantity,
+                    $quantity,
 
-                /*
-                 * Tạm thời = 0 vì Product
-                 * của TV2 chưa được tích hợp.
-                 *
-                 * Khi tích hợp Product thật,
-                 * giá sẽ lấy từ Product.
-                 */
-                'price' => 0,
+                'price' =>
+                    $price,
 
-                'subtotal' => 0,
-
+                'subtotal' =>
+                    $price * $quantity,
             ]);
         }
-
 
         return redirect()
             ->back()
@@ -382,7 +420,6 @@ class CartController extends Controller
             );
     }
 
-
     /**
      * Cập nhật số lượng sản phẩm.
      */
@@ -390,49 +427,43 @@ class CartController extends Controller
         Request $request,
         $id
     ) {
-
         $request->validate([
             'quantity' =>
                 'required|integer|min:1',
         ]);
 
+        $cartItem = $this->getCartQuery()
+            ->findOrFail($id);
 
-        $cartItem =
-            $this->getCartQuery()
-                ->findOrFail($id);
+        $product = Product::where(
+            'id',
+            $cartItem->product_id
+        )
+            ->where('is_active', true)
+            ->first();
 
+        if (!$product) {
+            return redirect()
+                ->back()
+                ->with(
+                    'error',
+                    'Sản phẩm không còn hoạt động.'
+                );
+        }
+
+        $price = $this->getProductPrice(
+            $product
+        );
 
         $quantity =
             (int) $request->quantity;
 
-
-        $updateData = [
-
-            'quantity' =>
-                $quantity,
-
-        ];
-
-
-        /*
-         * Nếu CartItem đã có giá,
-         * cập nhật lại subtotal.
-         */
-        if (
-            (float) $cartItem->price > 0
-        ) {
-
-            $updateData['subtotal'] =
-                (float) $cartItem->price
-                *
-                $quantity;
-        }
-
-
-        $cartItem->update(
-            $updateData
-        );
-
+        $cartItem->update([
+            'quantity' => $quantity,
+            'price' => $price,
+            'subtotal' =>
+                $price * $quantity,
+        ]);
 
         return redirect()
             ->back()
@@ -442,19 +473,15 @@ class CartController extends Controller
             );
     }
 
-
     /**
      * Xóa sản phẩm khỏi giỏ.
      */
     public function remove($id)
     {
-        $cartItem =
-            $this->getCartQuery()
-                ->findOrFail($id);
-
+        $cartItem = $this->getCartQuery()
+            ->findOrFail($id);
 
         $cartItem->delete();
-
 
         return redirect()
             ->back()
