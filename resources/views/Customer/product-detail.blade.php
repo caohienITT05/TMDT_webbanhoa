@@ -54,16 +54,20 @@
 
                 <div class="mt-6">
                     @if ((int) $product->stock > 0)
-                        <form method="POST" action="{{ route('cart.add', $product->id) }}" class="flex flex-wrap items-center gap-3">
+                        <form method="POST" action="{{ route('cart.add', $product->id) }}" class="flex flex-wrap items-center gap-3" x-data="{ quantity: {{ max(1, (int) old('quantity', 1)) }}, maxQuantity: {{ (int) $product->stock }} }">
                             @csrf
                             <label class="sr-only" for="quantity">Số lượng</label>
-                            <div class="bloom-quantity" x-data="{ quantity: {{ max(1, (int) old('quantity', 1)) }} }">
+                            <div class="bloom-quantity">
                                 <button type="button" @click="quantity = Math.max(1, quantity - 1)" aria-label="Giảm số lượng"><x-customer.icon name="minus" class="h-4 w-4" /></button>
-                                <input id="quantity" name="quantity" type="number" min="1" max="99" x-model.number="quantity" value="{{ old('quantity', 1) }}">
-                                <button type="button" @click="quantity = Math.min(99, quantity + 1)" aria-label="Tăng số lượng"><x-customer.icon name="plus" class="h-4 w-4" /></button>
+                                <input id="quantity" name="quantity" type="number" min="1" :max="maxQuantity" x-model.number="quantity" @input="quantity = Math.min(maxQuantity, Math.max(1, quantity || 1))">
+                                <button type="button" @click="quantity = Math.min(maxQuantity, quantity + 1)" aria-label="Tăng số lượng"><x-customer.icon name="plus" class="h-4 w-4" /></button>
                             </div>
-                            <button type="submit" class="bloom-button min-w-48">Thêm vào giỏ hàng <x-customer.icon name="bag" class="h-4 w-4" /></button>
-                            <button formaction="{{ route('favorites.toggle', $product->id) }}" formmethod="POST" class="bloom-icon-button border border-bloom-line bg-white {{ $isFavorite ? 'text-bloom-rose' : '' }}" title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm yêu thích' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm yêu thích' }}">
+                            <button type="submit" class="bloom-button bloom-button--outline min-w-44">Thêm vào giỏ <x-customer.icon name="cart-plus" class="h-4 w-4" /></button>
+                            <button type="submit" formaction="{{ route('buy-now.start', $product->id) }}" formmethod="POST" class="bloom-button min-w-36">Đặt hàng <x-customer.icon name="bag" class="h-4 w-4" /></button>
+                        </form>
+                        <form method="POST" action="{{ route('favorites.toggle', $product->id) }}" class="mt-3">
+                            @csrf
+                            <button type="submit" class="bloom-icon-button border border-bloom-line bg-white {{ $isFavorite ? 'text-bloom-rose' : '' }}" title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm yêu thích' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm yêu thích' }}">
                                 <x-customer.icon name="heart" class="h-5 w-5 {{ $isFavorite ? 'fill-current' : '' }}" />
                             </button>
                         </form>

@@ -7,6 +7,7 @@ use App\Models\DeliverySlot;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
+use App\Models\Product;
 use App\Models\Voucher;
 use App\Mail\OrderConfirmationMail;
 use Illuminate\Http\Request;
@@ -19,22 +20,58 @@ use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
+    private function cartItemsForCurrentCustomer()
+    {
+        return CartItem::with('product')
+            ->where(function ($query) {
+                if (Auth::check()) {
+                    $query->where('user_id', Auth::id());
+                } else {
+                    $query->where('session_id', Session::getId());
+                }
+            })
+            ->get();
+    }
+
+    private function currentProductPrice(Product $product): float
+    {
+        $regularPrice = (float) $product->price;
+        $salePrice = (float) ($product->sale_price ?? 0);
+
+        return $salePrice > 0 && $salePrice < $regularPrice ? $salePrice : $regularPrice;
+    }
+
+    private function checkoutView($cartItems, float $subtotal, string $checkoutMode = 'cart', ?Product $buyNowProduct = null, ?int $buyNowQuantity = null)
+    {
+        $deliverySlots = DeliverySlot::where('is_active', true)->get();
+        $voucherKeyPrefix = $checkoutMode === 'buy_now' ? 'buy_now_voucher_' : 'voucher_';
+        $voucherDiscount = min((float) Session::get($voucherKeyPrefix . 'discount', 0), $subtotal);
+        $voucherCode = Session::get($voucherKeyPrefix . 'code');
+
+        $activeVouchers = Voucher::where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNull('end_time')->orWhere('end_time', '>=', now());
+            })->take(2)->get();
+
+        return view('checkout.index', compact(
+            'cartItems',
+            'subtotal',
+            'deliverySlots',
+            'voucherDiscount',
+            'voucherCode',
+            'activeVouchers',
+            'checkoutMode',
+            'buyNowProduct',
+            'buyNowQuantity'
+        ));
+    }
+
     /**
      * 1. Hiển thị trang thanh toán với dữ liệu thực tế từ giỏ hàng
      */
     public function index()
     {
-        $userId = Auth::id();
-
-        // Lấy giỏ hàng thật từ database (hỗ trợ cả user đăng nhập lẫn khách vãng lai)
-        $cartItems = CartItem::with('product')
-            ->where(function ($query) use ($userId) {
-                if ($userId) {
-                    $query->where('user_id', $userId);
-                } else {
-                    $query->where('session_id', Session::getId());
-                }
-            })->get();
+        $cartItems = $this->cartItemsForCurrentCustomer();
 
         // Nếu giỏ hàng trống thì quay về trang cart
         if ($cartItems->isEmpty()) {
@@ -47,27 +84,39 @@ class CheckoutController extends Controller
             return $price * $item->quantity;
         });
 
-        // Danh sách khung giờ giao hoa
-        $deliverySlots = DeliverySlot::where('is_active', true)->get();
+        return $this->checkoutView($cartItems, $subtotal);
+    }
 
-        // Voucher giảm giá đã áp dụng trong Session
-        $voucherDiscount = (float) Session::get('voucher_discount', 0);
-        $voucherCode = Session::get('voucher_code', null);
+    /**
+     * Display a one-product checkout without reading or mutating the cart.
+     */
+    public function buyNow()
+    {
+        $buyNow = Session::get('buy_now');
+        $productId = $buyNow['product_id'] ?? null;
+        $quantity = (int) ($buyNow['quantity'] ?? 0);
 
-        // Voucher Flash Sale đang hoạt động để gợi ý cho khách
-        $activeVouchers = Voucher::where('is_active', true)
-            ->where(function ($q) {
-                $q->whereNull('end_time')->orWhere('end_time', '>=', now());
-            })->take(2)->get();
+        $product = Product::query()
+            ->whereKey($productId)
+            ->where('is_active', true)
+            ->first();
 
-        return view('checkout.index', compact(
-            'cartItems',
-            'subtotal',
-            'deliverySlots',
-            'voucherDiscount',
-            'voucherCode',
-            'activeVouchers'
-        ));
+        if (!$product || $quantity < 1 || $quantity > (int) $product->stock) {
+            Session::forget(['buy_now', 'buy_now_voucher_code', 'buy_now_voucher_discount', 'buy_now_voucher_id']);
+
+            return redirect()->route('products.index')->with('error', 'Sản phẩm đặt hàng không còn đủ điều kiện để thanh toán.');
+        }
+
+        $unitPrice = $this->currentProductPrice($product);
+        $checkoutItem = (object) [
+            'product_id' => $product->id,
+            'product' => $product,
+            'quantity' => $quantity,
+            'price' => $unitPrice,
+            'subtotal' => $unitPrice * $quantity,
+        ];
+
+        return $this->checkoutView(collect([$checkoutItem]), $checkoutItem->subtotal, 'buy_now', $product, $quantity);
     }
 
     /**
@@ -89,45 +138,73 @@ class CheckoutController extends Controller
             'order_note' => 'nullable|string|max:500',
         ]);
 
-        $userId = Auth::id();
-
-        // Lấy giỏ hàng thực tế từ database
-        $cartItems = CartItem::with('product')
-            ->where(function ($query) use ($userId) {
-                if ($userId) {
-                    $query->where('user_id', $userId);
-                } else {
-                    $query->where('session_id', Session::getId());
-                }
-            })->get();
-
-        if ($cartItems->isEmpty()) {
-            return redirect()->route('cart.index')->with('error', 'Giỏ hàng của bạn đang trống!');
-        }
-
-        // Tính toán tạm tính chính xác từ giỏ
+        $checkoutMode = $request->input('checkout_mode') === 'buy_now' ? 'buy_now' : 'cart';
         $subtotal = 0;
         $orderProducts = [];
 
-        foreach ($cartItems as $item) {
-            $price = (float) ($item->price ?? $item->product?->sale_price ?? $item->product?->price ?? 0);
-            $lineTotal = $price * $item->quantity;
-            $subtotal += $lineTotal;
+        if ($checkoutMode === 'buy_now') {
+            $buyNow = Session::get('buy_now');
+            $productId = $buyNow['product_id'] ?? null;
+            $product = Product::query()
+                ->whereKey($productId)
+                ->where('is_active', true)
+                ->first();
+            $quantity = (int) $request->input('buy_now_quantity', $buyNow['quantity'] ?? 0);
 
+            if (!$product || $quantity < 1 || $quantity > (int) $product->stock) {
+                return redirect()->route('buy-now.checkout')->with('error', 'Số lượng đặt hàng không hợp lệ hoặc đã vượt tồn kho.');
+            }
+
+            // Persist only the selected product and quantity in its dedicated session key.
+            Session::put('buy_now', [
+                'product_id' => $product->id,
+                'quantity' => $quantity,
+            ]);
+
+            $price = $this->currentProductPrice($product);
+            $subtotal = $price * $quantity;
             $orderProducts[] = [
-                'product_id' => $item->product_id,
-                'product_name' => $item->product ? $item->product->name : ('Hoa mã #' . $item->product_id),
+                'product_id' => $product->id,
+                'product_name' => $product->name,
                 'price' => $price,
-                'quantity' => $item->quantity,
-                'subtotal' => $lineTotal,
+                'quantity' => $quantity,
+                'subtotal' => $subtotal,
             ];
+        } else {
+            $cartItems = $this->cartItemsForCurrentCustomer();
+
+            if ($cartItems->isEmpty()) {
+                return redirect()->route('cart.index')->with('error', 'Giỏ hàng của bạn đang trống!');
+            }
+
+            foreach ($cartItems as $item) {
+                $price = (float) ($item->price ?? ($item->product ? $this->currentProductPrice($item->product) : 0));
+                $lineTotal = $price * $item->quantity;
+                $subtotal += $lineTotal;
+
+                $orderProducts[] = [
+                    'product_id' => $item->product_id,
+                    'product_name' => $item->product ? $item->product->name : ('Hoa mã #' . $item->product_id),
+                    'price' => $price,
+                    'quantity' => $item->quantity,
+                    'subtotal' => $lineTotal,
+                ];
+            }
         }
 
         // Nhận các loại phí được chọn từ trang Checkout
         $shippingFee = (float) $request->input('shipping_fee', 0);
         $giftCardFee = (float) $request->input('gift_card_fee', 0);
         $giftWrapFee = (float) $request->input('gift_wrap_fee', 0);
-        $discount = (float) Session::get('voucher_discount', 0);
+        $voucherKeyPrefix = $checkoutMode === 'buy_now' ? 'buy_now_voucher_' : 'voucher_';
+        $discount = min((float) Session::get($voucherKeyPrefix . 'discount', 0), $subtotal);
+
+        if ($checkoutMode === 'buy_now') {
+            $voucher = Voucher::valid()->find(Session::get('buy_now_voucher_id'));
+            $discount = $voucher && $subtotal >= (float) $voucher->min_order_amount
+                ? min((float) $voucher->calculateDiscount($subtotal), $subtotal)
+                : 0;
+        }
 
         // Tổng tiền cuối cùng
         $total = max(0, $subtotal + $shippingFee + $giftCardFee + $giftWrapFee - $discount);
@@ -190,15 +267,19 @@ class CheckoutController extends Controller
             return $order;
         });
 
-        // Xóa giỏ hàng sau khi đặt thành công
-        if (Auth::check()) {
+        // Cart checkout clears only its own cart. Buy Now never touches cart_items.
+        if ($checkoutMode === 'cart' && Auth::check()) {
             CartItem::where('user_id', Auth::id())->delete();
-        } else {
+        } elseif ($checkoutMode === 'cart') {
             CartItem::where('session_id', Session::getId())->delete();
+        } else {
+            Session::forget(['buy_now', 'buy_now_voucher_code', 'buy_now_voucher_discount', 'buy_now_voucher_id']);
         }
 
-        // Xóa thông tin voucher khỏi session
-        Session::forget(['voucher_discount', 'voucher_code', 'voucher_id', 'shipping_fee']);
+        // Keep voucher data scoped to the checkout mode that just completed.
+        if ($checkoutMode === 'cart') {
+            Session::forget(['voucher_discount', 'voucher_code', 'voucher_id', 'shipping_fee']);
+        }
 
         // Gửi email hóa đơn xác nhận đơn hàng tự động
         try {

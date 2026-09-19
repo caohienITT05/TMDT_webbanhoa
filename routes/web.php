@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\DeliverySlotController as AdminDeliverySlotContro
 
 // 2. Controllers Giỏ hàng, Quà tặng & Voucher (TV3)
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\BuyNowController;
 use App\Http\Controllers\VoucherController;
 use App\Http\Controllers\GiftController;
 use App\Http\Controllers\ShippingController;
@@ -176,6 +177,7 @@ Route::prefix('cart')->name('cart.')->group(function () {
 
 Route::match(['get', 'post'], '/gio-hang/them/{id?}', [CartController::class, 'add'])->name('cart.add.alias');
 Route::get('/gio-hang', [CartController::class, 'index'])->name('cart');
+Route::post('/mua-ngay/{product}', [BuyNowController::class, 'start'])->name('buy-now.start');
 
 Route::post('/voucher/apply', [VoucherController::class, 'apply'])->name('voucher.apply');
 Route::any('/voucher/remove', [VoucherController::class, 'remove'])->name('voucher.remove');
@@ -191,6 +193,7 @@ Route::post('/shipping/save', [ShippingController::class, 'save'])->name('shippi
 */
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::get('/mua-ngay', [CheckoutController::class, 'buyNow'])->name('buy-now.checkout');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::post('/checkout/process', [CheckoutController::class, 'store'])->name('checkout.process');
     Route::get('/thanh-toan', [CheckoutController::class, 'index'])->name('checkout');

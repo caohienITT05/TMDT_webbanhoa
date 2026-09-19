@@ -1,15 +1,21 @@
-<x-customer.layout title="Thanh toán">
+@php
+    $isBuyNow = ($checkoutMode ?? 'cart') === 'buy_now';
+    $buyNowHasSale = $isBuyNow && (float) ($buyNowProduct?->sale_price ?? 0) > 0 && (float) $buyNowProduct->sale_price < (float) $buyNowProduct->price;
+    $buyNowUnitPrice = $isBuyNow ? (float) ($buyNowHasSale ? $buyNowProduct->sale_price : $buyNowProduct?->price) : 0;
+@endphp
+
+<x-customer.layout :title="$isBuyNow ? 'Xác nhận đặt hàng' : 'Thanh toán'">
     <x-customer.breadcrumb :items="[
         ['label' => 'Trang chủ', 'url' => route('home')],
-        ['label' => 'Giỏ hàng', 'url' => route('cart.index')],
-        ['label' => 'Thanh toán'],
+        ['label' => $isBuyNow ? 'Đặt hàng' : 'Giỏ hàng', 'url' => $isBuyNow ? route('buy-now.checkout') : route('cart.index')],
+        ['label' => $isBuyNow ? 'Xác nhận đặt hàng' : 'Thanh toán'],
     ]" />
 
     <section class="bloom-shell pb-14 sm:pb-20">
         <div class="border-b border-bloom-line pb-7">
-            <p class="bloom-eyebrow">Hoàn tất đơn hàng</p>
-            <h1 class="bloom-title mt-2">Thanh toán</h1>
-            <p class="bloom-subtitle mt-3">Điền thông tin giao nhận, chọn các tùy chọn phù hợp và kiểm tra lại đơn hàng trước khi đặt.</p>
+            <p class="bloom-eyebrow">{{ $isBuyNow ? 'Đặt hàng' : 'Hoàn tất đơn hàng' }}</p>
+            <h1 class="bloom-title mt-2">{{ $isBuyNow ? 'Xác nhận đặt hàng' : 'Thanh toán' }}</h1>
+            <p class="bloom-subtitle mt-3">{{ $isBuyNow ? 'Kiểm tra số lượng, thông tin giao nhận và thanh toán cho sản phẩm bạn chọn.' : 'Điền thông tin giao nhận, chọn các tùy chọn phù hợp và kiểm tra lại đơn hàng trước khi đặt.' }}</p>
         </div>
 
         @if ($errors->any())
@@ -21,12 +27,45 @@
 
         <form action="{{ route('checkout.process') }}" method="POST" id="checkout-form" class="mt-8">
             @csrf
+            <input type="hidden" name="checkout_mode" value="{{ $isBuyNow ? 'buy_now' : 'cart' }}">
             <input type="hidden" name="shipping_fee" id="input_shipping_fee" value="0">
             <input type="hidden" name="gift_card_fee" id="input_gift_card_fee" value="0">
             <input type="hidden" name="gift_wrap_fee" id="input_gift_wrap_fee" value="0">
 
             <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
                 <div class="space-y-5">
+                    @if ($isBuyNow && $buyNowProduct)
+                        <section class="bloom-panel bloom-panel--padded" x-data="{ quantity: {{ $buyNowQuantity }}, maxQuantity: {{ (int) $buyNowProduct->stock }} }">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div class="flex items-center gap-3">
+                                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-bloom-rose text-xs font-bold text-white"><x-customer.icon name="bag" class="h-4 w-4" /></span>
+                                    <div><h2 class="bloom-card-title">Sản phẩm đặt hàng</h2><p class="mt-0.5 text-xs text-bloom-muted">Sản phẩm này tách biệt hoàn toàn khỏi giỏ hàng của bạn.</p></div>
+                                </div>
+                                <span class="bloom-status bloom-status--info">Đặt hàng</span>
+                            </div>
+                            <div class="mt-5 flex gap-4 rounded-lg border border-bloom-line p-3 sm:p-4">
+                                <x-customer.product-image :product="$buyNowProduct" class="h-20 w-20 shrink-0 rounded-md object-cover sm:h-24 sm:w-24" />
+                                <div class="min-w-0 flex-1">
+                                    <h3 class="line-clamp-2 text-sm font-semibold text-bloom-ink">{{ $buyNowProduct->name }}</h3>
+                                    <div class="mt-1 flex flex-wrap items-baseline gap-2">
+                                        <span class="text-sm font-bold text-bloom-rose">{{ number_format($buyNowUnitPrice, 0, ',', '.') }}₫</span>
+                                        @if ($buyNowHasSale)
+                                            <span class="text-xs text-bloom-muted line-through">{{ number_format($buyNowProduct->price, 0, ',', '.') }}₫</span>
+                                        @endif
+                                    </div>
+                                    <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+                                        <div class="bloom-quantity">
+                                            <button type="button" @click="quantity = Math.max(1, quantity - 1); $nextTick(() => calculateTotal())" aria-label="Giảm số lượng"><x-customer.icon name="minus" class="h-4 w-4" /></button>
+                                            <input id="buy_now_quantity" name="buy_now_quantity" type="number" min="1" :max="maxQuantity" x-model.number="quantity" @input="quantity = Math.min(maxQuantity, Math.max(1, quantity || 1)); calculateTotal()">
+                                            <button type="button" @click="quantity = Math.min(maxQuantity, quantity + 1); $nextTick(() => calculateTotal())" aria-label="Tăng số lượng"><x-customer.icon name="plus" class="h-4 w-4" /></button>
+                                        </div>
+                                        <p class="text-xs text-bloom-muted">Còn {{ $buyNowProduct->stock }} sản phẩm</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    @endif
+
                     <section class="bloom-panel bloom-panel--padded">
                         <div class="flex items-center gap-3">
                             <span class="flex h-8 w-8 items-center justify-center rounded-full bg-bloom-blush text-sm font-bold text-bloom-rose">1</span>
@@ -180,21 +219,21 @@
                     </section>
 
                     <section class="bloom-panel bloom-panel--padded">
-                        <div class="flex items-center justify-between gap-3"><h2 class="font-display text-lg font-semibold text-bloom-plum">Tóm tắt đơn hàng</h2><span class="text-xs text-bloom-muted">{{ $cartItems->sum('quantity') }} sản phẩm</span></div>
+                        <div class="flex items-center justify-between gap-3"><h2 class="font-display text-lg font-semibold text-bloom-plum">Tóm tắt đơn hàng</h2><span id="label_item_count" class="text-xs text-bloom-muted">{{ $cartItems->sum('quantity') }} sản phẩm</span></div>
                         <div class="mt-4 max-h-52 space-y-3 overflow-y-auto border-b border-bloom-line pb-4">
                             @foreach ($cartItems as $item)
-                                <div class="flex justify-between gap-3 text-sm"><span class="min-w-0 text-bloom-muted">{{ $item->product->name ?? 'Hoa tươi' }} <span class="whitespace-nowrap">× {{ $item->quantity }}</span></span><span class="whitespace-nowrap font-semibold text-bloom-ink">{{ number_format(($item->price ?? $item->product->price) * $item->quantity, 0, ',', '.') }}₫</span></div>
+                                <div class="flex justify-between gap-3 text-sm"><span class="min-w-0 text-bloom-muted">{{ $item->product->name ?? 'Hoa tươi' }} <span @if($isBuyNow) id="label_buy_now_quantity" @endif class="whitespace-nowrap">× {{ $item->quantity }}</span></span><span @if($isBuyNow) id="label_buy_now_line_total" @endif class="whitespace-nowrap font-semibold text-bloom-ink">{{ number_format(($item->price ?? $item->product->price) * $item->quantity, 0, ',', '.') }}₫</span></div>
                             @endforeach
                         </div>
                         <div class="mt-4 space-y-2.5 text-sm">
-                            <div class="flex justify-between gap-3"><span class="text-bloom-muted">Tạm tính</span><span class="font-semibold text-bloom-ink">{{ number_format($subtotal, 0, ',', '.') }}₫</span></div>
+                            <div class="flex justify-between gap-3"><span class="text-bloom-muted">Tạm tính</span><span id="label_subtotal" class="font-semibold text-bloom-ink">{{ number_format($subtotal, 0, ',', '.') }}₫</span></div>
                             <div class="flex justify-between gap-3"><span class="text-bloom-muted">Phí giao hàng</span><span id="label_shipping_fee" class="font-semibold text-bloom-ink">0₫</span></div>
                             <div class="flex justify-between gap-3"><span class="text-bloom-muted">Thiệp chúc</span><span id="label_gift_card_fee" class="font-semibold text-bloom-ink">0₫</span></div>
                             <div class="flex justify-between gap-3"><span class="text-bloom-muted">Gói quà</span><span id="label_gift_wrap_fee" class="font-semibold text-bloom-ink">0₫</span></div>
                             <div class="flex justify-between gap-3"><span class="text-bloom-muted">Giảm giá voucher</span><span class="font-semibold text-emerald-700">-{{ number_format($voucherDiscount, 0, ',', '.') }}₫</span></div>
                         </div>
                         <div class="mt-5 flex items-end justify-between gap-3 border-t border-bloom-line pt-4"><span class="font-semibold text-bloom-ink">Tổng thanh toán</span><span id="label_total_amount" class="text-xl font-bold text-bloom-rose">{{ number_format(max(0, $subtotal - $voucherDiscount), 0, ',', '.') }}₫</span></div>
-                        <button type="submit" class="bloom-button mt-5 w-full">Đặt hàng ngay <x-customer.icon name="shield" class="h-4 w-4" /></button>
+                        <button type="submit" class="bloom-button mt-5 w-full">{{ $isBuyNow ? 'Đặt mua' : 'Đặt hàng ngay' }} <x-customer.icon name="shield" class="h-4 w-4" /></button>
                         <p class="mt-3 text-center text-xs leading-5 text-bloom-muted">Khi đặt hàng, bạn đồng ý với các điều khoản giao dịch hiện có của BloomGift.</p>
                     </section>
                 </aside>
@@ -203,11 +242,22 @@
     </section>
 
     <script>
-        const subtotal = {{ (float) $subtotal }};
+        const initialSubtotal = {{ (float) $subtotal }};
         const discount = {{ (float) $voucherDiscount }};
+        const isBuyNow = {{ $isBuyNow ? 'true' : 'false' }};
+        const buyNowUnitPrice = {{ $buyNowUnitPrice }};
 
         function formatNumber(num) {
             return new Intl.NumberFormat('vi-VN').format(num) + '₫';
+        }
+
+        function getSubtotal() {
+            if (!isBuyNow) {
+                return initialSubtotal;
+            }
+
+            const quantity = Math.max(1, parseInt(document.getElementById('buy_now_quantity')?.value || '1', 10));
+            return buyNowUnitPrice * quantity;
         }
 
         function calculateTotal() {
@@ -223,8 +273,18 @@
             document.getElementById('label_gift_card_fee').innerText = formatNumber(cardFee);
             document.getElementById('label_gift_wrap_fee').innerText = formatNumber(wrapFee);
 
+            const subtotal = getSubtotal();
             const finalTotal = Math.max(0, subtotal + shipFee + cardFee + wrapFee - discount);
+
+            document.getElementById('label_subtotal').innerText = formatNumber(subtotal);
             document.getElementById('label_total_amount').innerText = formatNumber(finalTotal);
+
+            if (isBuyNow) {
+                const quantity = Math.max(1, parseInt(document.getElementById('buy_now_quantity').value || '1', 10));
+                document.getElementById('label_item_count').innerText = quantity + ' sản phẩm';
+                document.getElementById('label_buy_now_quantity').innerText = '× ' + quantity;
+                document.getElementById('label_buy_now_line_total').innerText = formatNumber(subtotal);
+            }
         }
 
         document.querySelectorAll('.option-calc').forEach(radio => radio.addEventListener('change', calculateTotal));
@@ -255,6 +315,20 @@
             codeInput.name = 'code';
             codeInput.value = code;
             form.appendChild(codeInput);
+
+            const modeInput = document.createElement('input');
+            modeInput.type = 'hidden';
+            modeInput.name = 'checkout_mode';
+            modeInput.value = isBuyNow ? 'buy_now' : 'cart';
+            form.appendChild(modeInput);
+
+            if (isBuyNow) {
+                const quantityInput = document.createElement('input');
+                quantityInput.type = 'hidden';
+                quantityInput.name = 'buy_now_quantity';
+                quantityInput.value = document.getElementById('buy_now_quantity').value;
+                form.appendChild(quantityInput);
+            }
 
             document.body.appendChild(form);
             form.submit();

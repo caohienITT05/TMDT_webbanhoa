@@ -134,17 +134,17 @@
 
 <body>
     <header>
-        <div class="logo">🌸 BloomGift</div>
+        <div class="logo">BloomGift</div>
 
         <nav>
             <a href="{{ route('home') }}">Trang chủ</a>
             <a href="{{ route('products') }}">Sản phẩm</a>
-            <a href="{{ route('cart.index') }}">🛒 Giỏ hàng</a>
+            <a href="{{ route('cart.index') }}">Giỏ hàng</a>
         </nav>
     </header>
 
     <main class="container">
-        <h1>🛒 Giỏ hàng của bạn</h1>
+        <h1>Giỏ hàng của bạn</h1>
 
         @if (session('success'))
             <div class="message">

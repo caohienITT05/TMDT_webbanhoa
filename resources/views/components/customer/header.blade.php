@@ -1,3 +1,9 @@
+@php
+    $cartItemCount = \App\Models\CartItem::query()
+        ->when(auth()->check(), fn ($query) => $query->where('user_id', auth()->id()), fn ($query) => $query->where('session_id', session()->getId()))
+        ->sum('quantity');
+@endphp
+
 <header x-data="{ mobileOpen: false, accountOpen: false }" class="sticky top-0 z-40 border-b border-bloom-line bg-white/95 backdrop-blur">
     <div class="border-b border-bloom-line bg-bloom-plum text-white">
         <div class="bloom-shell flex min-h-9 items-center justify-center text-center text-xs font-medium tracking-wide text-white/90 sm:justify-between">
@@ -33,8 +39,11 @@
             <a href="{{ route('favorites.index') }}" class="bloom-icon-button" title="Yêu thích" aria-label="Sản phẩm yêu thích">
                 <x-customer.icon name="heart" class="h-5 w-5" />
             </a>
-            <a href="{{ route('cart.index') }}" class="bloom-icon-button" title="Giỏ hàng" aria-label="Giỏ hàng">
+            <a href="{{ route('cart.index') }}" class="bloom-icon-button relative" title="Giỏ hàng" aria-label="Giỏ hàng{{ $cartItemCount ? ': ' . $cartItemCount . ' sản phẩm' : '' }}">
                 <x-customer.icon name="bag" class="h-5 w-5" />
+                @if ($cartItemCount > 0)
+                    <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-bloom-rose px-1 text-[9px] font-bold leading-none text-white">{{ $cartItemCount > 99 ? '99+' : $cartItemCount }}</span>
+                @endif
             </a>
 
             @auth
@@ -48,7 +57,7 @@
                             <p class="truncate text-xs text-bloom-muted">{{ auth()->user()->email }}</p>
                         </div>
                         <a href="{{ route('profile.edit') }}" class="bloom-menu-link"><x-customer.icon name="user" class="h-4 w-4" />Tài khoản</a>
-                        <a href="{{ route('customer.orders') }}" class="bloom-menu-link"><x-customer.icon name="receipt" class="h-4 w-4" />Đơn hàng của tôi</a>
+                        <a href="{{ route('customer.orders') }}" class="bloom-menu-link"><x-customer.icon name="package" class="h-4 w-4" />Đơn hàng của tôi</a>
                         @if (auth()->user()->role === 'admin')
                             <a href="{{ route('admin.dashboard') }}" class="bloom-menu-link"><x-customer.icon name="grid" class="h-4 w-4" />Quản trị</a>
                         @endif

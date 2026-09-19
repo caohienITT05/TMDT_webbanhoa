@@ -10,6 +10,14 @@ use Illuminate\Support\Facades\Session;
 
 class CartController extends Controller
 {
+    private function currentProductPrice(Product $product): float
+    {
+        $regularPrice = (float) $product->price;
+        $salePrice = (float) ($product->sale_price ?? 0);
+
+        return $salePrice > 0 && $salePrice < $regularPrice ? $salePrice : $regularPrice;
+    }
+
     /**
      * Lấy các CartItem của người dùng hiện tại (kèm thông tin Product).
      */
@@ -33,7 +41,7 @@ class CartController extends Controller
 
         foreach ($cartItems as $item) {
             // Lấy giá từ Product thực tế nếu CartItem chưa có giá
-            $price = (float) ($item->product ? $item->product->price : $item->price);
+            $price = $item->product ? $this->currentProductPrice($item->product) : (float) $item->price;
             $quantity = (int) $item->quantity;
             $itemSubtotal = $price * $quantity;
 
@@ -122,12 +130,19 @@ class CartController extends Controller
         }
 
         // Lấy thông tin hoa thật từ database TV2
-        $product = Product::find($productId);
+        $product = Product::query()
+            ->whereKey($productId)
+            ->where('is_active', true)
+            ->first();
         if (!$product) {
-            return redirect()->back()->with('error', 'Sản phẩm không tồn tại trong danh mục!');
+            return redirect()->back()->with('error', 'Sản phẩm không còn sẵn sàng để thêm vào giỏ hàng.');
         }
 
-        $price = (float) $product->price;
+        if ($quantity > (int) $product->stock) {
+            return redirect()->back()->with('error', 'Số lượng chọn vượt quá số lượng hoa hiện có.');
+        }
+
+        $price = $this->currentProductPrice($product);
 
         $cartItem = $this->getCartQuery()
             ->where('product_id', $product->id)
@@ -135,6 +150,11 @@ class CartController extends Controller
 
         if ($cartItem) {
             $newQuantity = $cartItem->quantity + $quantity;
+
+            if ($newQuantity > (int) $product->stock) {
+                return redirect()->back()->with('error', 'Tổng số lượng trong giỏ vượt quá số lượng hoa hiện có.');
+            }
+
             $cartItem->update([
                 'quantity' => $newQuantity,
                 'price' => $price,
@@ -151,7 +171,7 @@ class CartController extends Controller
             ]);
         }
 
-        return redirect()->route('cart.index')->with('success', 'Đã thêm bó hoa "' . $product->name . '" vào giỏ hàng!');
+        return redirect()->back()->with('success', 'Đã thêm "' . $product->name . '" vào giỏ hàng.');
     }
 
     /**

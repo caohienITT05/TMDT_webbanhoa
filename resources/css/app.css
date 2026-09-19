@@ -4,17 +4,18 @@
 
 @layer base {
     :root {
-        --bloom-rose: #9f3657;
-        --bloom-rose-dark: #7d2743;
-        --bloom-plum: #2f1d28;
-        --bloom-ink: #352932;
-        --bloom-muted: #766a70;
-        --bloom-canvas: #fcfaf8;
-        --bloom-blush: #f7eeed;
-        --bloom-line: #eadfdb;
-        --bloom-success: #18745d;
+        --bloom-rose: #b94f64;
+        --bloom-rose-dark: #973e51;
+        --bloom-plum: #2d2728;
+        --bloom-ink: #2d2728;
+        --bloom-muted: #776e70;
+        --bloom-canvas: #fff9f7;
+        --bloom-blush: #fff1ef;
+        --bloom-line: #eadddd;
+        --bloom-accent: #d3a35d;
+        --bloom-success: #4f7a5a;
         --bloom-warning: #a9671a;
-        --bloom-danger: #b23e4c;
+        --bloom-danger: #b84343;
     }
 
     html {
@@ -138,6 +139,18 @@
         background: var(--bloom-blush);
         border-color: var(--bloom-rose);
         color: var(--bloom-rose);
+    }
+
+    .bloom-button--outline {
+        background: #fff;
+        border-color: var(--bloom-rose);
+        color: var(--bloom-rose);
+    }
+
+    .bloom-button--outline:hover {
+        background: var(--bloom-blush);
+        border-color: var(--bloom-rose-dark);
+        color: var(--bloom-rose-dark);
     }
 
     .bloom-button--danger {
@@ -362,6 +375,15 @@
     .bloom-order-row { transition: background .18s ease; }
     .bloom-order-row:hover { background: #fffafa; }
 
+    .bloom-product-action {
+        font-size: .72rem;
+        min-width: 0;
+        padding-inline: .45rem;
+        white-space: nowrap;
+    }
+
+    .bloom-product-action svg { height: .9rem; width: .9rem; }
+
     /* Admin UI: deliberately separate from the customer storefront styles above. */
     .admin-page { color: #374151; }
     .admin-panel { background: #fff; border: 1px solid #fce7ef; border-radius: 1rem; box-shadow: 0 1px 2px rgba(15, 23, 42, .04); }
@@ -446,4 +468,6 @@
     .admin-pagination__controls { max-width: 100%; overflow-x: auto; padding-bottom: .15rem; }
     .admin-pagination__edge-label { display: none; }
     .admin-pagination__edge { min-width: 2.4rem; padding: 0; }
+    .bloom-product-card .bloom-product-action { font-size: .66rem; gap: .25rem; padding-inline: .3rem; }
+    .bloom-product-card .bloom-product-action svg { height: .78rem; width: .78rem; }
 }

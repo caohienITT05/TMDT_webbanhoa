@@ -10,7 +10,7 @@
     $productUrl = route('product.detail', $product->slug ?: $product->id);
 @endphp
 
-<article class="group relative flex h-full flex-col overflow-hidden rounded-xl border border-bloom-line bg-white transition duration-200 hover:-translate-y-1 hover:shadow-bloom">
+<article class="bloom-product-card group relative flex h-full flex-col overflow-hidden rounded-xl border border-bloom-line bg-white transition duration-200 hover:-translate-y-1 hover:shadow-bloom">
     <a href="{{ $productUrl }}" class="relative block aspect-[4/4.8] overflow-hidden bg-bloom-blush">
         <x-customer.product-image :product="$product" class="h-full w-full transition duration-500 group-hover:scale-[1.035]" />
         @if ($hasSale && $discountPercent > 0)
@@ -37,16 +37,32 @@
                 <span class="text-xs text-bloom-muted line-through">{{ number_format($originalPrice, 0, ',', '.') }}₫</span>
             @endif
         </div>
-        <div class="mt-4 grid grid-cols-2 gap-2">
-            <a href="{{ $productUrl }}" class="bloom-button bloom-button--ghost bloom-button--small justify-center">Chi tiết</a>
+        <div class="mt-4 space-y-2">
+            <a href="{{ $productUrl }}" class="bloom-button bloom-button--ghost bloom-button--small bloom-product-action w-full justify-center">
+                <x-customer.icon name="eye" class="h-4 w-4" />
+                Xem chi tiết
+            </a>
             @if (!isset($product->stock) || (int) $product->stock > 0)
-                <form method="POST" action="{{ route('cart.add', $product->id) }}">
-                    @csrf
-                    <input type="hidden" name="quantity" value="1">
-                    <button type="submit" class="bloom-button bloom-button--small w-full justify-center">Thêm giỏ</button>
-                </form>
+                <div class="grid grid-cols-2 gap-2">
+                    <form method="POST" action="{{ route('cart.add', $product->id) }}">
+                        @csrf
+                        <input type="hidden" name="quantity" value="1">
+                        <button type="submit" class="bloom-button bloom-button--outline bloom-button--small bloom-product-action w-full justify-center">
+                            <x-customer.icon name="cart-plus" class="h-4 w-4" />
+                            Thêm vào giỏ
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ route('buy-now.start', $product->id) }}">
+                        @csrf
+                        <input type="hidden" name="quantity" value="1">
+                        <button type="submit" class="bloom-button bloom-button--small bloom-product-action w-full justify-center">
+                            <x-customer.icon name="bag" class="h-4 w-4" />
+                            Đặt hàng
+                        </button>
+                    </form>
+                </div>
             @else
-                <span class="flex items-center justify-center text-xs font-medium text-bloom-muted">Hết hàng</span>
+                <span class="flex min-h-10 items-center justify-center rounded-md bg-bloom-blush text-xs font-medium text-bloom-muted">Tạm hết hàng</span>
             @endif
         </div>
     </div>

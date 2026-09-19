@@ -13,14 +13,15 @@ export default {
         extend: {
             colors: {
                 bloom: {
-                    rose: '#9f3657',
-                    plum: '#2f1d28',
-                    ink: '#352932',
-                    muted: '#766a70',
-                    canvas: '#fcfaf8',
-                    blush: '#f7eeed',
-                    line: '#eadfdb',
-                    danger: '#b23e4c',
+                    rose: '#b94f64',
+                    plum: '#2d2728',
+                    ink: '#2d2728',
+                    muted: '#776e70',
+                    canvas: '#fff9f7',
+                    blush: '#fff1ef',
+                    line: '#eadddd',
+                    accent: '#d3a35d',
+                    danger: '#b84343',
                 },
             },
             fontFamily: {
