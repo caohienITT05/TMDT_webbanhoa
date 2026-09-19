@@ -20,6 +20,7 @@ use App\Http\Controllers\ShippingController;
 
 // 3. Controllers Đặt hàng & Thanh toán PayPal (TV4)
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\Customer\OrderController as CustomerOrderController;
 
 // Models
 use App\Models\Category;
@@ -200,7 +201,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/paypal/cancel', [CheckoutController::class, 'paypalCancel'])->name('paypal.cancel');
 
     // Trang xem đơn hàng sau khi đặt thành công
-    Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+    Route::get('/orders/{order}', [CustomerOrderController::class, 'show'])->name('orders.show');
 
     // Xem danh sách và theo dõi đơn hàng của khách hàng (UC14)
     Route::get('/don-hang-cua-toi', function () {
@@ -236,6 +237,9 @@ Route::middleware('auth')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+
+    // Điểm vào ngắn gọn cho khu vực quản trị.
+    Route::redirect('/', '/admin/dashboard')->name('home');
 
     // Bảng điều khiển quản trị & Thống kê doanh thu tự động
     Route::get('/dashboard', function () {
@@ -406,8 +410,5 @@ Route::get('/fix-db', function () {
         <a href='/checkout' style='display: inline-block; padding: 10px 24px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold;'>Quay lại trang Checkout để Đặt Hàng</a>
     </div>";
 });
-
-// Route xem chi tiết đơn hàng sau khi thanh toán thành công
-Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
 
 require __DIR__ . '/auth.php';

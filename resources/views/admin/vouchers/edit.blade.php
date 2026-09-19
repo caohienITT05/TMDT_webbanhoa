@@ -5,15 +5,12 @@
 <div class="max-w-4xl bg-white rounded-xl shadow-md p-6 border border-gray-200">
     <div class="flex items-center justify-between mb-6 pb-2 border-b">
         <div>
-            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                🎟️ Chỉnh sửa Voucher: <span class="text-rose-600">{{ $voucher->code }}</span>
+            <h2 class="admin-page-title">
+                Chỉnh sửa voucher: <span class="text-rose-600">{{ $voucher->code }}</span>
             </h2>
             <p class="text-xs text-gray-500 mt-0.5">Cập nhật thông tin mã ưu đãi và khung giờ Flash Sale</p>
         </div>
-        <a href="{{ route('admin.vouchers.index') }}" 
-           class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full text-xs font-semibold transition">
-            &larr; Quay lại danh sách
-        </a>
+        <x-admin.button :href="route('admin.vouchers.index')" variant="secondary" size="sm">Quay lại danh sách</x-admin.button>
     </div>
 
     <form action="{{ route('admin.vouchers.update', $voucher) }}" method="POST" class="space-y-5">
@@ -145,12 +142,8 @@
 
         <!-- Nút thao tác -->
         <div class="flex justify-end gap-3 pt-6 border-t border-gray-100">
-            <a href="{{ route('admin.vouchers.index') }}"
-                class="px-5 py-2.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium">Hủy bỏ</a>
-            <button type="submit" style="background-color: #e11d48; color: #ffffff;"
-                class="px-6 py-2.5 font-bold rounded-lg shadow-md hover:opacity-90 text-sm">
-                💾 Cập nhật Voucher
-            </button>
+            <x-admin.button :href="route('admin.vouchers.index')" variant="secondary">Hủy bỏ</x-admin.button>
+            <x-admin.button type="submit" variant="primary">Cập nhật voucher</x-admin.button>
         </div>
     </form>
 </div>

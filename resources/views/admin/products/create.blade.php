@@ -3,7 +3,7 @@
 
 @section('content')
     <div class="max-w-4xl bg-white rounded-xl shadow-md p-6 border border-gray-200">
-        <h2 class="text-xl font-bold text-gray-800 mb-6 pb-2 border-b">🌸 Đăng bán sản phẩm hoa / quà mới</h2>
+        <h2 class="admin-page-title mb-6 border-b pb-2">Đăng bán sản phẩm hoa / quà mới</h2>
 
         <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
             @csrf
@@ -113,12 +113,8 @@
 
             <!-- Nút thao tác -->
             <div class="flex justify-end gap-3 pt-6 border-t border-gray-100">
-                <a href="{{ route('admin.products.index') }}"
-                    class="px-5 py-2.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium">Hủy bỏ</a>
-                <button type="submit" style="background-color: #e11d48; color: #ffffff;"
-                    class="px-6 py-2.5 font-bold rounded-lg shadow-md hover:opacity-90 text-sm">
-                    💾 Đăng bán sản phẩm
-                </button>
+                <x-admin.button :href="route('admin.products.index')" variant="secondary">Hủy bỏ</x-admin.button>
+                <x-admin.button type="submit" variant="primary">Đăng bán sản phẩm</x-admin.button>
             </div>
         </form>
     </div>

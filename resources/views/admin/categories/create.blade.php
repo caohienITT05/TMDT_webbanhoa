@@ -3,7 +3,7 @@
 
 @section('content')
     <div class="max-w-3xl bg-white rounded-xl shadow-md p-6 border border-gray-200">
-        <h2 class="text-xl font-bold text-gray-800 mb-6 pb-2 border-b">🌸 Tạo danh mục hoa / quà mới</h2>
+        <h2 class="admin-page-title mb-6 border-b pb-2">Tạo danh mục hoa / quà mới</h2>
 
         <form action="{{ route('admin.categories.store') }}" method="POST" class="space-y-5">
             @csrf
@@ -44,14 +44,8 @@
 
             <!-- Cụm nút Thao tác -->
             <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-100">
-                <a href="{{ route('admin.categories.index') }}"
-                    class="px-5 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-100 text-sm transition">
-                    Quay lại
-                </a>
-                <button type="submit" style="background-color: #e11d48; color: #ffffff;"
-                    class="px-6 py-2.5 font-bold rounded-lg shadow-md hover:opacity-90 text-sm transition flex items-center gap-2 cursor-pointer">
-                    💾 Lưu danh mục mới
-                </button>
+                <x-admin.button :href="route('admin.categories.index')" variant="secondary">Quay lại</x-admin.button>
+                <x-admin.button type="submit" variant="primary">Lưu danh mục mới</x-admin.button>
             </div>
         </form>
     </div>

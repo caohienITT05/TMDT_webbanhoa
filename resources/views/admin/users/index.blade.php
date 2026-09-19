@@ -29,10 +29,8 @@
             </select>
 
             <div class="flex gap-2">
-                <button type="submit"
-                    class="px-5 py-2 bg-gray-800 hover:bg-black text-white rounded-lg text-sm font-semibold">Lọc</button>
-                <a href="{{ route('admin.users.index') }}"
-                    class="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50">Đặt lại</a>
+                <x-admin.button type="submit" variant="primary">Lọc</x-admin.button>
+                <x-admin.button :href="route('admin.users.index')" variant="secondary">Đặt lại</x-admin.button>
             </div>
         </form>
 
@@ -57,35 +55,28 @@
                             <td class="p-3.5 font-mono">{{ $user->phone ?? '—' }}</td>
                             <td class="p-3.5">
                                 <span
-                                    class="px-2.5 py-1 text-xs rounded-full font-bold {{ $user->role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700' }}">
+                                    class="admin-badge {{ $user->role === 'admin' ? 'admin-badge--progress' : 'admin-badge--info' }}">
                                     {{ strtoupper($user->role) }}
                                 </span>
                             </td>
                             <td class="p-3.5">
                                 @if($user->is_active)
-                                    <span class="px-2.5 py-1 text-xs rounded-full bg-green-100 text-green-700 font-semibold">Hoạt
-                                        động</span>
+                                    <span class="admin-badge admin-badge--success">Hoạt động</span>
                                 @else
-                                    <span class="px-2.5 py-1 text-xs rounded-full bg-red-100 text-red-700 font-semibold">Bị
-                                        khóa</span>
+                                    <span class="admin-badge admin-badge--danger">Bị khóa</span>
                                 @endif
                             </td>
                             <td class="p-3.5 text-center">
-                                <div class="inline-flex items-center gap-3">
-                                    <a href="{{ route('admin.users.show', $user) }}"
-                                        class="font-semibold text-blue-600 hover:underline text-sm">
-                                        Chi tiết
-                                    </a>
+                                <div class="admin-table-actions">
+                                    <x-admin.button :href="route('admin.users.show', $user)" variant="detail" size="sm">Chi tiết</x-admin.button>
                                     @if($user->id !== auth()->id())
-                                        <span class="text-gray-300">|</span>
                                         <form action="{{ route('admin.users.toggle', $user) }}" method="POST" class="inline"
                                             onsubmit="return confirm('Bạn có chắc muốn thay đổi trạng thái tài khoản này?');">
                                             @csrf
                                             @method('PATCH')
-                                            <button type="submit"
-                                                class="font-semibold text-sm {{ $user->is_active ? 'text-red-600 hover:underline' : 'text-green-600 hover:underline' }}">
+                                            <x-admin.button type="submit" :variant="$user->is_active ? 'danger' : 'secondary'" size="sm">
                                                 {{ $user->is_active ? 'Khóa' : 'Mở khóa' }}
-                                            </button>
+                                            </x-admin.button>
                                         </form>
                                     @endif
                                 </div>
@@ -99,6 +90,6 @@
                 </tbody>
             </table>
         </div>
-        <div class="mt-4">{{ $users->links() }}</div>
+        <div class="mt-4"><x-admin.pagination :paginator="$users" item-label="tài khoản" /></div>
     </div>
 @endsection

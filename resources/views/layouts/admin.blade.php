@@ -10,12 +10,13 @@
 </head>
 
 <body class="bg-[#fff5f7] font-sans antialiased text-gray-700">
-    <div class="min-h-screen flex">
+    <div x-data="{ menuOpen: false }" @keydown.escape.window="menuOpen = false" class="min-h-screen flex">
         <!-- Sidebar Hồng Pastel -->
         <!-- ========================================================
      SIDEBAR ADMIN - THEME ĐEN SANG TRỌNG & ICON VECTOR VECTOR
      ======================================================== -->
-        <aside class="w-64 min-h-screen flex flex-col justify-between shrink-0 shadow-2xl relative select-none"
+        <div x-cloak x-show="menuOpen" x-transition.opacity @click="menuOpen = false" class="fixed inset-0 z-30 bg-slate-950/45 lg:hidden"></div>
+        <aside :class="{ 'translate-x-0': menuOpen }" class="fixed inset-y-0 left-0 z-40 flex min-h-screen w-64 shrink-0 -translate-x-full flex-col justify-between shadow-2xl transition-transform duration-200 lg:sticky lg:top-0 lg:translate-x-0 select-none"
             style="background: #14151f; color: #94a3b8; font-family: system-ui, -apple-system, sans-serif;">
 
             <div class="p-5">
@@ -216,26 +217,30 @@
         </aside>
 
         <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col">
+        <div class="flex min-w-0 flex-1 flex-col">
             <!-- Header chuẩn phong cách BloomGift -->
             <header
-                class="bg-white/80 backdrop-blur h-16 flex items-center justify-between px-8 border-b border-rose-100 shadow-sm sticky top-0 z-10">
+                class="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-rose-100 bg-white/80 px-4 shadow-sm backdrop-blur sm:px-8">
                 <div class="flex items-center gap-4">
-                    <button class="text-rose-400 hover:text-rose-600 text-lg">☰</button>
+                    <button type="button" @click="menuOpen = true" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-rose-500 transition hover:bg-rose-50 hover:text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-200 lg:hidden" aria-label="Mở menu quản trị">
+                        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 5.5h13M3.5 10h13M3.5 14.5h13" stroke-linecap="round" /></svg>
+                    </button>
                     <span
                         class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-500 text-xs font-medium border border-rose-100">
-                        🌸 Chào mừng bạn đến với BloomGift Admin
+                        <svg aria-hidden="true" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 16.5V10m0 0C6.2 10 5.5 7.3 6.5 5.2 8.8 5.4 10 7.1 10 10Zm0 0c3.8 0 4.5-2.7 3.5-4.8C11.2 5.4 10 7.1 10 10Zm0 0c-1.2 0-2.8 1.4-2.8 3.3 1.9.3 3.1-.7 2.8-3.3Zm0 0c1.2 0 2.8 1.4 2.8 3.3-1.9.3-3.1-.7-2.8-3.3Z" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                        <span class="hidden sm:inline">Chào mừng bạn đến với BloomGift Admin</span>
+                        <span class="sm:hidden">BloomGift Admin</span>
                     </span>
                 </div>
                 <div class="flex items-center gap-4 text-xs">
-                    <button class="text-gray-400 hover:text-rose-500 relative">
-                        🔔
+                    <button type="button" class="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-rose-50 hover:text-rose-500" aria-label="Thông báo">
+                        <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14.5 8.3a4.5 4.5 0 0 0-9 0c0 5-2 5.4-2 6.2h13c0-.8-2-1.2-2-6.2ZM8 16.5h4" stroke-linecap="round" stroke-linejoin="round" /></svg>
                         <span class="w-1.5 h-1.5 bg-rose-500 rounded-full absolute -top-0.5 -right-0.5"></span>
                     </button>
                     <div class="flex items-center gap-2">
                         <span
                             class="w-7 h-7 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-xs">
-                            🌸
+                            {{ strtoupper(substr(Auth::user()->name ?? 'A', 0, 1)) }}
                         </span>
                         <span class="text-gray-600">Xin chào, <b
                                 class="text-gray-800">{{ Auth::user()->name }}</b></span>
@@ -244,7 +249,7 @@
             </header>
 
             <!-- Nội dung chính -->
-            <main class="p-8 flex-1 space-y-6">
+            <main class="flex-1 space-y-6 p-4 sm:p-6 lg:p-8">
                 @if(session('success'))
                     <div
                         class="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl shadow-sm flex items-center gap-2">

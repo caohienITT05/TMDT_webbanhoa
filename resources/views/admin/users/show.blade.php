@@ -8,10 +8,7 @@
                 <h2 class="text-xl font-bold text-gray-800">{{ $user->name }}</h2>
                 <p class="text-xs text-gray-500">Ngày tham gia: {{ $user->created_at->format('d/m/Y H:i') }}</p>
             </div>
-            <a href="{{ route('admin.users.index') }}"
-                class="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
-                &larr; Quay lại danh sách
-            </a>
+            <x-admin.button :href="route('admin.users.index')" variant="secondary">Quay lại danh sách</x-admin.button>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">

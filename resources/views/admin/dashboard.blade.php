@@ -178,9 +178,9 @@
                 <!-- Nút Quản lý ngay -->
                 <div class="relative z-10 mt-5 flex items-center justify-between">
                     <a href="{{ route('admin.vouchers.index') }}"
-                        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-rose-600 bg-white hover:bg-rose-50 shadow-md transition-all">
-                        <span>Quản lý ngay</span>
-                        <span>&rarr;</span>
+                        class="inline-flex min-h-10 items-center gap-2 rounded-lg bg-white px-4 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-white/70">
+                        Quản lý ngay
+                        <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m8 5 5 5-5 5" stroke-linecap="round" stroke-linejoin="round" /></svg>
                     </a>
                     <span class="text-5xl opacity-90 drop-shadow">🎁</span>
                 </div>
@@ -194,56 +194,33 @@
             <div
                 class="lg:col-span-7 bg-white rounded-2xl p-6 border border-rose-100 shadow-sm flex flex-col justify-between">
                 <div class="flex items-center gap-2 mb-4">
-                    <span class="text-rose-500 font-bold">⚡</span>
+                    <svg aria-hidden="true" class="h-4 w-4 text-rose-500" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m11.5 2.5-7 9h5l-1 6 7-9h-5l1-6Z" stroke-linecap="round" stroke-linejoin="round" /></svg>
                     <h4 class="text-xs font-bold text-gray-800 uppercase tracking-wider">Thao tác nhanh</h4>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <!-- Nút 1: Thêm sản phẩm -->
                     <a href="{{ route('admin.products.create') }}"
-                        class="flex items-center justify-between p-3.5 rounded-xl border border-rose-100 hover:border-rose-300 hover:bg-rose-50/50 transition-all group">
-                        <div class="flex items-center gap-3">
-                            <span
-                                class="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center text-xs font-bold">＋</span>
-                            <span class="text-xs font-semibold text-gray-700 group-hover:text-rose-600">Thêm sản phẩm</span>
-                        </div>
-                        <span class="text-gray-400 group-hover:text-rose-500 text-xs">›</span>
+                        class="admin-quick-action admin-quick-action--primary">
+                        <span class="admin-quick-action__icon"><svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v12M4 10h12" stroke-linecap="round" /></svg></span>
+                        <span>Thêm sản phẩm</span>
                     </a>
 
-                    <!-- Nút 2: Xem đơn hàng -->
                     <a href="{{ route('admin.orders.index') }}"
-                        class="flex items-center justify-between p-3.5 rounded-xl border border-purple-100 hover:border-purple-300 hover:bg-purple-50/50 transition-all group">
-                        <div class="flex items-center gap-3">
-                            <span
-                                class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold">📋</span>
-                            <span class="text-xs font-semibold text-gray-700 group-hover:text-purple-600">Quản lý đơn
-                                hàng</span>
-                        </div>
-                        <span class="text-gray-400 group-hover:text-purple-500 text-xs">›</span>
+                        class="admin-quick-action">
+                        <span class="admin-quick-action__icon"><svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3.5h6l3 3V16a.5.5 0 0 1-.5.5h-9A.5.5 0 0 1 5 16V4a.5.5 0 0 1 .5-.5H6Z" /><path d="M11.5 3.5V7H15M8 10h4M8 13h4" stroke-linecap="round" /></svg></span>
+                        <span>Quản lý đơn hàng</span>
                     </a>
 
-                    <!-- Nút 3: Tạo danh mục dịp lễ -->
                     <a href="{{ route('admin.categories.index') }}"
-                        class="flex items-center justify-between p-3.5 rounded-xl border border-emerald-100 hover:border-emerald-300 hover:bg-emerald-50/50 transition-all group">
-                        <div class="flex items-center gap-3">
-                            <span
-                                class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">🏷️</span>
-                            <span class="text-xs font-semibold text-gray-700 group-hover:text-emerald-600">Danh mục dịp
-                                lễ</span>
-                        </div>
-                        <span class="text-gray-400 group-hover:text-emerald-500 text-xs">›</span>
+                        class="admin-quick-action">
+                        <span class="admin-quick-action__icon"><svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 8.2V5a1.5 1.5 0 0 1 1.5-1.5h4l7.5 7.5-5.5 5.5L3.5 9Z" stroke-linejoin="round" /><circle cx="7" cy="7" r=".8" fill="currentColor" stroke="none" /></svg></span>
+                        <span>Quản lý danh mục</span>
                     </a>
 
-                    <!-- Nút 4: Tạo voucher -->
                     <a href="{{ route('admin.vouchers.index') }}"
-                        class="flex items-center justify-between p-3.5 rounded-xl border border-amber-100 hover:border-amber-300 hover:bg-amber-50/50 transition-all group">
-                        <div class="flex items-center gap-3">
-                            <span
-                                class="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-xs font-bold">🎟️</span>
-                            <span class="text-xs font-semibold text-gray-700 group-hover:text-amber-600">Tạo voucher
-                                mới</span>
-                        </div>
-                        <span class="text-gray-400 group-hover:text-amber-500 text-xs">›</span>
+                        class="admin-quick-action">
+                        <span class="admin-quick-action__icon"><svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4.5h12v3a2 2 0 1 0 0 4v4H4v-4a2 2 0 1 0 0-4v-3Z" stroke-linejoin="round" /><path d="M10 5.5v9" stroke-dasharray="1.5 1.5" /></svg></span>
+                        <span>Tạo voucher mới</span>
                     </a>
                 </div>
             </div>
@@ -303,46 +280,11 @@
                                 </td>
 
                                 <!-- Trạng thái viên thuốc bo tròn -->
-                                <td class="py-4 px-5 text-center">
-                                    @if(in_array($rawStatus, ['COMPLETED', 'DELIVERED']))
-                                        <span
-                                            class="inline-block px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wider bg-emerald-100 text-emerald-700">
-                                            COMPLETED
-                                        </span>
-                                    @elseif($rawStatus === 'CONFIRMED')
-                                        <span
-                                            class="inline-block px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wider bg-rose-100 text-rose-600">
-                                            CONFIRMED
-                                        </span>
-                                    @elseif($rawStatus === 'PREPARING')
-                                        <span
-                                            class="inline-block px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wider bg-purple-100 text-purple-700">
-                                            PREPARING
-                                        </span>
-                                    @elseif($rawStatus === 'SHIPPING')
-                                        <span
-                                            class="inline-block px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wider bg-sky-100 text-sky-700">
-                                            SHIPPING
-                                        </span>
-                                    @elseif($rawStatus === 'CANCELLED')
-                                        <span
-                                            class="inline-block px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wider bg-red-100 text-red-600">
-                                            CANCELLED
-                                        </span>
-                                    @else
-                                        <span
-                                            class="inline-block px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wider bg-amber-100 text-amber-700">
-                                            PENDING
-                                        </span>
-                                    @endif
-                                </td>
+                                <td class="py-4 px-5 text-center"><x-admin.status-badge :status="$rawStatus" /></td>
 
                                 <!-- Hành động -->
                                 <td class="py-4 px-5 text-right">
-                                    <a href="{{ route('admin.orders.show', $order) }}"
-                                        class="text-xs font-bold text-rose-500 hover:text-rose-700 hover:underline">
-                                        Chi tiết
-                                    </a>
+                                    <x-admin.button :href="route('admin.orders.show', $order)" variant="detail" size="sm">Chi tiết</x-admin.button>
                                 </td>
                             </tr>
                         @empty

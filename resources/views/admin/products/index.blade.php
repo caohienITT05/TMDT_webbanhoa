@@ -6,15 +6,13 @@
         <!-- Tiêu đề & Nút Thêm sản phẩm viên thuốc -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-                <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                    🌸 Danh sách hoa & quà tặng
-                </h2>
+                <h2 class="admin-page-title">Danh sách hoa & quà tặng</h2>
                 <p class="text-xs text-gray-500 mt-0.5">Quản lý kho hoa, giá bán, mùa vụ và hình ảnh sản phẩm</p>
             </div>
-            <a href="{{ route('admin.products.create') }}"
-                class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs rounded-full shadow-sm transition flex items-center gap-1.5">
-                <span>+</span> Thêm sản phẩm mới
-            </a>
+            <x-admin.button :href="route('admin.products.create')" variant="primary">
+                <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v12M4 10h12" stroke-linecap="round" /></svg>
+                Thêm sản phẩm mới
+            </x-admin.button>
         </div>
 
         <!-- Thông báo Thành công / Thất bại -->
@@ -70,14 +68,8 @@
                 <option value="all" {{ request('season') == 'all' ? 'selected' : '' }}>🌿 Bốn mùa</option>
             </select>
 
-            <button type="submit"
-                class="px-4 py-1.5 bg-rose-400 hover:bg-rose-500 text-white rounded-full text-xs font-semibold shadow-sm transition flex items-center gap-1">
-                🔍 Lọc
-            </button>
-            <a href="{{ route('admin.products.index') }}"
-                class="px-3 py-1.5 bg-white border border-rose-200 text-gray-500 rounded-full text-xs hover:bg-rose-50 transition">
-                🔄 Đặt lại
-            </a>
+            <x-admin.button type="submit" variant="primary" size="sm">Lọc</x-admin.button>
+            <x-admin.button :href="route('admin.products.index')" variant="secondary" size="sm">Đặt lại</x-admin.button>
         </form>
 
         <!-- Thanh Tabs lọc nhanh theo mùa -->
@@ -171,20 +163,13 @@
                                     @endif
                                 </td>
                                 <td class="p-3 px-5 text-center">
-                                    <div class="inline-flex items-center gap-3">
-                                        <a href="{{ route('admin.products.edit', $prod) }}"
-                                            class="text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1">
-                                            ✏️ Sửa
-                                        </a>
-                                        <span class="text-rose-200">|</span>
+                                    <div class="admin-table-actions">
+                                        <x-admin.button :href="route('admin.products.edit', $prod)" variant="detail" size="sm">Sửa</x-admin.button>
                                         <form action="{{ route('admin.products.destroy', $prod) }}" method="POST" class="inline"
                                             onsubmit="return confirm('Bạn có chắc muốn xóa sản phẩm này?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit"
-                                                class="text-rose-400 hover:text-rose-600 font-semibold flex items-center gap-1">
-                                                🗑️ Xóa
-                                            </button>
+                                            <x-admin.button type="submit" variant="danger" size="sm">Xóa</x-admin.button>
                                         </form>
                                     </div>
                                 </td>
@@ -198,7 +183,7 @@
                 </table>
             </div>
             <div class="p-4 border-t border-rose-50">
-                {{ $products->links() }}
+                <x-admin.pagination :paginator="$products" item-label="sản phẩm" />
             </div>
         </div>
     </div>

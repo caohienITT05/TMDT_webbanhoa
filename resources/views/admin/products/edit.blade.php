@@ -3,7 +3,7 @@
 
 @section('content')
     <div class="max-w-4xl bg-white rounded-xl shadow-md p-6 border border-gray-200">
-        <h2 class="text-xl font-bold text-gray-800 mb-6 pb-2 border-b">✏️ Cập nhật thông tin: <span
+        <h2 class="admin-page-title mb-6 border-b pb-2">Cập nhật thông tin: <span
                 class="text-rose-600">{{ $product->name }}</span></h2>
 
         <form action="{{ route('admin.products.update', $product) }}" method="POST" enctype="multipart/form-data"
@@ -72,12 +72,8 @@
             </div>
 
             <div class="flex justify-end gap-3 pt-6 border-t border-gray-100">
-                <a href="{{ route('admin.products.index') }}"
-                    class="px-5 py-2.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium">Hủy bỏ</a>
-                <button type="submit" style="background-color: #2563eb; color: #ffffff;"
-                    class="px-6 py-2.5 font-bold rounded-lg shadow-md hover:opacity-90 text-sm">
-                    💾 Cập nhật sản phẩm
-                </button>
+                <x-admin.button :href="route('admin.products.index')" variant="secondary">Hủy bỏ</x-admin.button>
+                <x-admin.button type="submit" variant="primary">Cập nhật sản phẩm</x-admin.button>
             </div>
         </form>
     </div>

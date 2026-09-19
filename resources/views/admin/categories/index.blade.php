@@ -6,15 +6,13 @@
         <!-- Tiêu đề & Nút thêm mới bo tròn viên thuốc -->
         <div class="flex justify-between items-center">
             <div>
-                <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                    🌸 Tất cả danh mục
-                </h2>
+                <h2 class="admin-page-title">Tất cả danh mục</h2>
                 <p class="text-xs text-gray-500 mt-0.5">Quản lý cơ cấu phân loại hoa & quà tặng của BloomGift</p>
             </div>
-            <a href="{{ route('admin.categories.create') }}"
-                class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs rounded-full shadow-sm transition flex items-center gap-1.5">
-                <span>+</span> Thêm danh mục mới
-            </a>
+            <x-admin.button :href="route('admin.categories.create')" variant="primary">
+                <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v12M4 10h12" stroke-linecap="round" /></svg>
+                Thêm danh mục mới
+            </x-admin.button>
         </div>
 
         <!-- Bảng danh mục nền hồng nhạt -->
@@ -56,20 +54,13 @@
                                     {{ $cat->products_count }}
                                 </td>
                                 <td class="p-3.5 px-5 text-center">
-                                    <div class="inline-flex items-center gap-3">
-                                        <a href="{{ route('admin.categories.edit', $cat) }}"
-                                            class="text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1">
-                                            ✏️ Sửa
-                                        </a>
-                                        <span class="text-rose-200">|</span>
+                                    <div class="admin-table-actions">
+                                        <x-admin.button :href="route('admin.categories.edit', $cat)" variant="detail" size="sm">Sửa</x-admin.button>
                                         <form action="{{ route('admin.categories.destroy', $cat) }}" method="POST"
                                             class="inline" onsubmit="return confirm('Bạn có chắc muốn xóa danh mục này?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit"
-                                                class="text-rose-400 hover:text-rose-600 font-semibold flex items-center gap-1">
-                                                🗑️ Xóa
-                                            </button>
+                                            <x-admin.button type="submit" variant="danger" size="sm">Xóa</x-admin.button>
                                         </form>
                                     </div>
                                 </td>
@@ -83,7 +74,7 @@
                 </table>
             </div>
             <div class="p-4 border-t border-rose-50">
-                {{ $categories->links() }}
+                <x-admin.pagination :paginator="$categories" item-label="danh mục" />
             </div>
         </div>
     </div>

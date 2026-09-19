@@ -1,145 +1,49 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nhắc dịp lễ BloomGift</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #fff0f5;
-            margin: 0;
-            padding: 20px;
-            color: #333333;
-        }
-
-        .email-wrapper {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 16px;
-            overflow: hidden;
-            border: 1px solid #ffe5ec;
-            box-shadow: 0 4px 15px rgba(225, 29, 72, 0.08);
-        }
-
-        .email-header {
-            background: linear-gradient(135deg, #fb7185, #e11d48);
-            padding: 30px 20px;
-            text-align: center;
-            color: #ffffff;
-        }
-
-        .email-header h1 {
-            margin: 0;
-            font-size: 22px;
-            font-weight: 700;
-        }
-
-        .email-header p {
-            margin: 8px 0 0;
-            font-size: 14px;
-            opacity: 0.95;
-        }
-
-        .email-body {
-            padding: 30px 25px;
-            line-height: 1.6;
-        }
-
-        .voucher-card {
-            background-color: #fff0f3;
-            border: 2px dashed #f43f5e;
-            border-radius: 12px;
-            padding: 18px;
-            text-align: center;
-            margin: 25px 0;
-        }
-
-        .voucher-title {
-            font-size: 13px;
-            color: #881337;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .voucher-code {
-            font-size: 28px;
-            font-weight: 800;
-            color: #e11d48;
-            margin: 8px 0;
-            letter-spacing: 2px;
-        }
-
-        .voucher-desc {
-            font-size: 12px;
-            color: #4b5563;
-        }
-
-        .btn-cta {
-            display: inline-block;
-            background-color: #e11d48;
-            color: #ffffff !important;
-            text-decoration: none;
-            padding: 12px 30px;
-            border-radius: 9999px;
-            font-weight: 700;
-            font-size: 14px;
-            box-shadow: 0 4px 10px rgba(225, 29, 72, 0.3);
-        }
-
-        .email-footer {
-            background-color: #fffafb;
-            padding: 20px;
-            text-align: center;
-            border-top: 1px solid #ffe5ec;
-            font-size: 12px;
-            color: #6b7280;
-        }
+        body { margin: 0; padding: 24px 12px; background: #fcfaf8; color: #352932; font-family: Arial, Helvetica, sans-serif; }
+        .email-wrapper { width: 100%; max-width: 600px; margin: 0 auto; overflow: hidden; background: #ffffff; border: 1px solid #eadfdb; border-radius: 10px; }
+        .email-header { padding: 34px 28px 30px; background: #2f1d28; color: #ffffff; text-align: center; }
+        .brand { margin: 0; font-family: Georgia, serif; font-size: 28px; font-weight: 700; letter-spacing: -.4px; }
+        .brand-mark { display: inline-block; width: 10px; height: 10px; margin-right: 7px; border-radius: 50%; background: #d99aaf; vertical-align: middle; }
+        .eyebrow { margin: 13px 0 0; color: #ead7dc; font-size: 11px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; }
+        .email-body { padding: 34px 28px; line-height: 1.7; }
+        h1 { margin: 0 0 18px; color: #2f1d28; font-family: Georgia, serif; font-size: 25px; line-height: 1.3; }
+        p { margin: 0 0 16px; color: #5f555a; font-size: 15px; }
+        .voucher-card { margin: 28px 0; padding: 22px; border: 1px dashed #b85b78; border-radius: 8px; background: #f9f0ef; text-align: center; }
+        .voucher-title { margin: 0; color: #7d2743; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+        .voucher-code { margin: 10px 0 7px; color: #9f3657; font-size: 28px; font-weight: 800; letter-spacing: 2px; }
+        .voucher-desc { margin: 0; color: #766a70; font-size: 12px; line-height: 1.6; }
+        .cta-wrap { margin: 28px 0 4px; text-align: center; }
+        .btn-cta { display: inline-block; padding: 13px 22px; border-radius: 6px; background: #9f3657; color: #ffffff !important; font-size: 14px; font-weight: 700; text-decoration: none; }
+        .email-footer { padding: 21px 28px; border-top: 1px solid #eadfdb; background: #fcfaf8; text-align: center; }
+        .email-footer p { margin: 0; color: #766a70; font-size: 12px; line-height: 1.6; }
+        @media only screen and (max-width: 480px) { body { padding: 0; } .email-wrapper { border-radius: 0; border-left: 0; border-right: 0; } .email-header, .email-body { padding-left: 22px; padding-right: 22px; } }
     </style>
 </head>
-
 <body>
     <div class="email-wrapper">
         <div class="email-header">
-            <h1>🌸 Tiệm Hoa Tươi BloomGift</h1>
-            <p>Trao gửi yêu thương - Trọn vẹn từng khoảnh khắc</p>
+            <p class="brand"><span class="brand-mark"></span>BloomGift</p>
+            <p class="eyebrow">Hoa & quà tặng cho những dịp đặc biệt</p>
         </div>
-
         <div class="email-body">
-            <h2 style="color: #9f1239; font-size: 18px; margin-top: 0;">
-                💐 Dịp Lễ {{ $holidayName }} Đang Đến Rất Gần!
-            </h2>
-            <p>Xin chào <strong>{{ $user->name ?? 'Bạn thân mến' }}</strong>,</p>
-            <p>
-                Những ngày lễ đặc biệt là thời điểm ý nghĩa nhất để chúng ta gửi gắm tình cảm, sự trân trọng đến những
-                người phụ nữ yêu thương qua những đóa hoa tươi thắm.
-            </p>
-            <p>
-                Để các nghệ nhân cắm hoa chuẩn bị chu đáo và đảm bảo giao hoa đúng khung giờ bạn mong muốn, BloomGift
-                gợi ý bạn nên đặt lịch sớm ngay từ hôm nay.
-            </p>
-
+            <h1>Dịp lễ {{ $holidayName }} đang đến gần</h1>
+            <p>Xin chào <strong>{{ $user->name ?? 'bạn' }}</strong>,</p>
+            <p>Những ngày lễ đặc biệt là dịp ý nghĩa để gửi gắm tình cảm và sự trân trọng qua một món quà thật tinh tế.</p>
+            <p>BloomGift gợi ý bạn đặt lịch sớm để chủ động chọn sản phẩm, ngày và khung giờ giao phù hợp.</p>
             <div class="voucher-card">
-                <div class="voucher-title">Món quà ưu đãi đặt sớm dành tặng riêng bạn</div>
+                <p class="voucher-title">Ưu đãi dành cho bạn</p>
                 <div class="voucher-code">{{ $voucherCode }}</div>
-                <div class="voucher-desc">Nhập mã này tại bước thanh toán để nhận ngay chiết khấu cho đơn hoa</div>
+                <p class="voucher-desc">Nhập mã này tại bước thanh toán để nhận ưu đãi cho đơn hàng.</p>
             </div>
-
-            <div style="text-align: center; margin: 30px 0 10px;">
-                <a href="http://127.0.0.1:8000" class="btn-cta">
-                    🌷 Khám Phá Bộ Sưu Tập Hoa
-                </a>
-            </div>
+            <div class="cta-wrap"><a href="{{ config('app.url') }}" class="btn-cta">Khám phá bộ sưu tập</a></div>
         </div>
-
-        <div class="email-footer">
-            <p style="margin: 0 0 5px;"><strong>BloomGift - Cửa Hàng Hoa Tươi & Quà Tặng Trực Tuyến</strong></p>
-            <p style="margin: 0;">Hotline hỗ trợ: 0988.123.456 | Email: support@bloomgift.vn</p>
-        </div>
+        <div class="email-footer"><p><strong>BloomGift</strong> · Gửi trọn lời thương trong từng món quà.</p></div>
     </div>
 </body>
-
 </html>

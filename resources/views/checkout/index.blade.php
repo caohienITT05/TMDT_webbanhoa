@@ -1,365 +1,213 @@
-<!DOCTYPE html>
-<html lang="vi">
+<x-customer.layout title="Thanh toán">
+    <x-customer.breadcrumb :items="[
+        ['label' => 'Trang chủ', 'url' => route('home')],
+        ['label' => 'Giỏ hàng', 'url' => route('cart.index')],
+        ['label' => 'Thanh toán'],
+    ]" />
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thanh toán đơn hoa - BloomGift</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-rose: #e11d48;
-            --soft-rose: #fff0f3;
-            --border-rose: #ffe4e6;
-        }
-
-        body {
-            background-color: #fff5f7;
-            font-family: system-ui, -apple-system, sans-serif;
-            color: #374151;
-        }
-
-        .checkout-box {
-            background: #fff;
-            border-radius: 16px;
-            border: 1px solid var(--border-rose);
-            padding: 24px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(225, 29, 72, 0.03);
-        }
-
-        .section-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: #881337;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .form-control,
-        .form-select {
-            border-color: #fecdd3;
-            border-radius: 10px;
-            font-size: 14px;
-        }
-
-        .form-control:focus,
-        .form-select:focus {
-            border-color: var(--primary-rose);
-            box-shadow: 0 0 0 0.2rem rgba(225, 29, 72, 0.15);
-        }
-
-        .service-card {
-            border: 1px solid #fed7aa;
-            border-radius: 12px;
-            padding: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: #fffaf0;
-        }
-
-        .service-card:hover {
-            border-color: var(--primary-rose);
-        }
-
-        .btn-order {
-            background-color: var(--primary-rose);
-            color: #fff;
-            font-weight: 700;
-            border-radius: 9999px;
-            padding: 14px;
-            border: none;
-            width: 100%;
-            transition: opacity 0.2s;
-        }
-
-        .btn-order:hover {
-            opacity: 0.95;
-            color: #fff;
-        }
-    </style>
-</head>
-
-<body>
-
-    <div class="container py-4">
-        <!-- Header -->
-        <div class="text-center mb-4">
-            <h2 class="h3 fw-bold text-dark">🌸 BloomGift - Thanh toán đơn hoa</h2>
-            <p class="text-muted small">Trao gửi yêu thương - Cam kết hoa tươi trong ngày</p>
+    <section class="bloom-shell pb-14 sm:pb-20">
+        <div class="border-b border-bloom-line pb-7">
+            <p class="bloom-eyebrow">Hoàn tất đơn hàng</p>
+            <h1 class="bloom-title mt-2">Thanh toán</h1>
+            <p class="bloom-subtitle mt-3">Điền thông tin giao nhận, chọn các tùy chọn phù hợp và kiểm tra lại đơn hàng trước khi đặt.</p>
         </div>
 
-        @if(session('error'))
-            <div class="alert alert-danger rounded-3 py-2 small mb-3">⚠️ {{ session('error') }}</div>
+        @if ($errors->any())
+            <div class="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-800">
+                <p class="font-semibold">Thông tin đơn hàng cần được kiểm tra lại.</p>
+                <p>{{ $errors->first() }}</p>
+            </div>
         @endif
 
-        <form action="{{ route('checkout.process') }}" method="POST" id="checkout-form">
+        <form action="{{ route('checkout.process') }}" method="POST" id="checkout-form" class="mt-8">
             @csrf
-
-            <!-- Các biến tính toán ẩn để gửi lên server -->
             <input type="hidden" name="shipping_fee" id="input_shipping_fee" value="0">
             <input type="hidden" name="gift_card_fee" id="input_gift_card_fee" value="0">
             <input type="hidden" name="gift_wrap_fee" id="input_gift_wrap_fee" value="0">
 
-            <div class="row g-4">
-                <!-- Cột trái: Form thông tin & Dịch vụ đi kèm -->
-                <div class="col-lg-7">
-
-                    <!-- 1. Thông tin người nhận -->
-                    <div class="checkout-box">
-                        <div class="section-title">1. Thông tin người nhận hoa</div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold">Họ và tên người nhận <span
-                                        class="text-danger">*</span></label>
-                                <input type="text" name="recipient_name" class="form-control" required
-                                    value="{{ old('recipient_name', auth()->user()->name ?? '') }}"
-                                    placeholder="Ví dụ: Nguyễn Thị Lan">
+            <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
+                <div class="space-y-5">
+                    <section class="bloom-panel bloom-panel--padded">
+                        <div class="flex items-center gap-3">
+                            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-bloom-blush text-sm font-bold text-bloom-rose">1</span>
+                            <div><h2 class="bloom-card-title">Thông tin người nhận</h2><p class="mt-0.5 text-xs text-bloom-muted">Thông tin dùng cho việc giao đơn hàng.</p></div>
+                        </div>
+                        <div class="mt-6 grid gap-5 sm:grid-cols-2">
+                            <div>
+                                <label class="bloom-label" for="recipient_name">Họ và tên người nhận <span class="text-bloom-danger">*</span></label>
+                                <input id="recipient_name" type="text" name="recipient_name" class="bloom-input h-11 w-full px-3" required value="{{ old('recipient_name', auth()->user()->name ?? '') }}" placeholder="Ví dụ: Nguyễn Thị Lan">
+                                @error('recipient_name') <p class="bloom-field-error">{{ $message }}</p> @enderror
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold">Số điện thoại liên hệ <span
-                                        class="text-danger">*</span></label>
-                                <input type="text" name="recipient_phone" class="form-control" required
-                                    value="{{ old('recipient_phone') }}" placeholder="0988xxxxxx">
+                            <div>
+                                <label class="bloom-label" for="recipient_phone">Số điện thoại liên hệ <span class="text-bloom-danger">*</span></label>
+                                <input id="recipient_phone" type="text" name="recipient_phone" class="bloom-input h-11 w-full px-3" required value="{{ old('recipient_phone') }}" placeholder="0988xxxxxx">
+                                @error('recipient_phone') <p class="bloom-field-error">{{ $message }}</p> @enderror
                             </div>
-                            <div class="col-12">
-                                <label class="form-label small fw-bold">Địa chỉ nhận hoa chi tiết <span
-                                        class="text-danger">*</span></label>
-                                <input type="text" name="recipient_address" class="form-control" required
-                                    value="{{ old('recipient_address') }}"
-                                    placeholder="Số nhà, ngõ, tên đường, quận/huyện...">
+                            <div class="sm:col-span-2">
+                                <label class="bloom-label" for="recipient_address">Địa chỉ nhận hoa chi tiết <span class="text-bloom-danger">*</span></label>
+                                <input id="recipient_address" type="text" name="recipient_address" class="bloom-input h-11 w-full px-3" required value="{{ old('recipient_address') }}" placeholder="Số nhà, ngõ, tên đường, quận/huyện...">
+                                @error('recipient_address') <p class="bloom-field-error">{{ $message }}</p> @enderror
                             </div>
                         </div>
-                    </div>
+                    </section>
 
-                    <!-- 2. Thời gian giao hoa -->
-                    <div class="checkout-box">
-                        <div class="section-title">2. Lịch trình giao nhận hoa</div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold">Ngày giao hoa <span
-                                        class="text-danger">*</span></label>
-                                <input type="date" name="delivery_date" class="form-control" required
-                                    min="{{ date('Y-m-d') }}" value="{{ old('delivery_date', date('Y-m-d')) }}">
+                    <section class="bloom-panel bloom-panel--padded">
+                        <div class="flex items-center gap-3">
+                            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-bloom-blush text-sm font-bold text-bloom-rose">2</span>
+                            <div><h2 class="bloom-card-title">Lịch giao nhận</h2><p class="mt-0.5 text-xs text-bloom-muted">Chọn ngày và khung giờ còn hoạt động.</p></div>
+                        </div>
+                        <div class="mt-6 grid gap-5 sm:grid-cols-2">
+                            <div>
+                                <label class="bloom-label" for="delivery_date">Ngày giao hoa <span class="text-bloom-danger">*</span></label>
+                                <input id="delivery_date" type="date" name="delivery_date" class="bloom-input h-11 w-full px-3" required min="{{ date('Y-m-d') }}" value="{{ old('delivery_date', date('Y-m-d')) }}">
+                                @error('delivery_date') <p class="bloom-field-error">{{ $message }}</p> @enderror
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold">Khung giờ giao hoa <span
-                                        class="text-danger">*</span></label>
-                                <select name="delivery_slot_id" class="form-select" required>
-                                    <option value="">-- Chọn khung giờ nhận hoa --</option>
-                                    @foreach($deliverySlots as $slot)
-                                        <option value="{{ $slot->id }}">{{ $slot->name }}</option>
+                            <div>
+                                <label class="bloom-label" for="delivery_slot_id">Khung giờ giao hoa <span class="text-bloom-danger">*</span></label>
+                                <select id="delivery_slot_id" name="delivery_slot_id" class="bloom-select w-full" required>
+                                    <option value="">Chọn khung giờ nhận hoa</option>
+                                    @foreach ($deliverySlots as $slot)
+                                        <option value="{{ $slot->id }}" @selected((string) old('delivery_slot_id') === (string) $slot->id)>{{ $slot->name }}</option>
                                     @endforeach
                                 </select>
+                                @error('delivery_slot_id') <p class="bloom-field-error">{{ $message }}</p> @enderror
                             </div>
                         </div>
-                    </div>
+                    </section>
 
-                    <!-- 3. Tùy chọn Thiệp chúc & Gói quà cao cấp -->
-                    <div class="checkout-box">
-                        <div class="section-title">3. Tùy chọn Thiệp chúc mừng & Gói quà</div>
-
-                        <!-- Chọn thiệp -->
-                        <label class="form-label small fw-bold text-secondary mb-2">💌 Dịch vụ thiệp chúc mừng:</label>
-                        <div class="d-flex gap-3 mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input option-calc" type="radio" name="card_option"
-                                    id="card_none" value="0" checked data-type="card">
-                                <label class="form-check-label small" for="card_none">Không kèm thiệp (0đ)</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input option-calc" type="radio" name="card_option"
-                                    id="card_yes" value="10000" data-type="card">
-                                <label class="form-check-label small" for="card_yes">Thiệp hoa thiết kế cao cấp
-                                    (+10.000đ)</label>
-                            </div>
+                    <section class="bloom-panel bloom-panel--padded">
+                        <div class="flex items-center gap-3">
+                            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-bloom-blush text-sm font-bold text-bloom-rose">3</span>
+                            <div><h2 class="bloom-card-title">Thiệp và gói quà</h2><p class="mt-0.5 text-xs text-bloom-muted">Các tùy chọn này được cộng vào tổng tiền ở bên phải.</p></div>
                         </div>
 
-                        <!-- Ô nhập lời chúc thiệp -->
-                        <div class="mb-4" id="box_card_message">
-                            <label class="form-label small fw-bold">Nội dung lời chúc in lên thiệp:</label>
-                            <textarea name="card_message" class="form-control" rows="2"
-                                placeholder="Ví dụ: Chúc mừng sinh nhật em yêu, mãi luôn rạng rỡ như đóa hoa này nhé!"></textarea>
-                        </div>
-
-                        <hr class="border-light-subtle my-3">
-
-                        <!-- Chọn gói quà -->
-                        <label class="form-label small fw-bold text-secondary mb-2">🎁 Phong cách gói hoa & Quà
-                            tặng:</label>
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <div class="service-card d-flex align-items-center gap-2">
-                                    <input class="form-check-input mt-0 option-calc" type="radio" name="wrap_option"
-                                        id="wrap_standard" value="0" checked data-type="wrap">
-                                    <label class="small cursor-pointer mb-0" for="wrap_standard">
-                                        <strong>Gói giấy lụa tiêu chuẩn</strong><br>
-                                        <span class="text-muted text-xs">Mặc định của tiệm hoa (0đ)</span>
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="service-card d-flex align-items-center gap-2">
-                                    <input class="form-check-input mt-0 option-calc" type="radio" name="wrap_option"
-                                        id="wrap_premium" value="30000" data-type="wrap">
-                                    <label class="small cursor-pointer mb-0" for="wrap_premium">
-                                        <strong>Hộp quà nắp kính BloomGift</strong><br>
-                                        <span class="text-danger fw-bold">+30.000đ</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 4. Phương thức vận chuyển -->
-                    <div class="checkout-box">
-                        <div class="section-title">4. Hình thức giao hàng</div>
-                        <div class="d-flex flex-column gap-2">
-                            <div class="form-check">
-                                <input class="form-check-input option-calc" type="radio" name="ship_option"
-                                    id="ship_standard" value="0" checked data-type="ship">
-                                <label class="form-check-label small" for="ship_standard">
-                                    🚚 <strong>Giao hàng tiêu chuẩn:</strong> Miễn phí trong bán kính 5km (0đ)
+                        <fieldset class="mt-6">
+                            <legend class="bloom-label">Thiệp chúc mừng</legend>
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-bloom-line p-3.5 transition hover:border-bloom-rose">
+                                    <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="card_option" id="card_none" value="0" checked data-type="card">
+                                    <span><span class="block text-sm font-semibold text-bloom-ink">Không kèm thiệp</span><span class="mt-0.5 block text-xs text-bloom-muted">0₫</span></span>
+                                </label>
+                                <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-bloom-line p-3.5 transition hover:border-bloom-rose">
+                                    <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="card_option" id="card_yes" value="10000" data-type="card">
+                                    <span><span class="block text-sm font-semibold text-bloom-ink">Thiệp lời chúc</span><span class="mt-0.5 block text-xs text-bloom-rose">+10.000₫</span></span>
                                 </label>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input option-calc" type="radio" name="ship_option"
-                                    id="ship_express" value="30000" data-type="ship">
-                                <label class="form-check-label small" for="ship_express">
-                                    ⚡ <strong>Giao hoa hỏa tốc đúng giờ hẹn:</strong> Bảo quản thùng lạnh (+30.000đ)
-                                </label>
+                            <div class="mt-4" id="box_card_message">
+                                <label class="bloom-label" for="card_message">Nội dung lời chúc in lên thiệp</label>
+                                <textarea id="card_message" name="card_message" class="bloom-textarea w-full" rows="2" placeholder="Ví dụ: Chúc mừng sinh nhật em yêu...">{{ old('card_message') }}</textarea>
+                                @error('card_message') <p class="bloom-field-error">{{ $message }}</p> @enderror
                             </div>
-                        </div>
-                    </div>
+                        </fieldset>
 
-                    <!-- 5. Phương thức thanh toán -->
-                    <div class="checkout-box">
-                        <div class="section-title">5. Phương thức thanh toán</div>
-                        <div class="d-flex flex-column gap-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="payment_method" id="pay_cod"
-                                    value="cod" checked>
-                                <label class="form-check-label small fw-bold" for="pay_cod">
-                                    💵 Thanh toán khi nhận hoa (COD)
+                        <fieldset class="mt-6 border-t border-bloom-line pt-5">
+                            <legend class="bloom-label">Phong cách gói hoa & quà tặng</legend>
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-bloom-line p-3.5 transition hover:border-bloom-rose">
+                                    <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="wrap_option" id="wrap_standard" value="0" checked data-type="wrap">
+                                    <span><span class="block text-sm font-semibold text-bloom-ink">Gói tiêu chuẩn</span><span class="mt-0.5 block text-xs text-bloom-muted">0₫</span></span>
+                                </label>
+                                <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-bloom-line p-3.5 transition hover:border-bloom-rose">
+                                    <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="wrap_option" id="wrap_premium" value="30000" data-type="wrap">
+                                    <span><span class="block text-sm font-semibold text-bloom-ink">Gói quà cao cấp</span><span class="mt-0.5 block text-xs text-bloom-rose">+30.000₫</span></span>
                                 </label>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="payment_method" id="pay_paypal"
-                                    value="paypal">
-                                <label class="form-check-label small fw-bold" for="pay_paypal">
-                                    💳 Thanh toán trực tuyến qua PayPal Sandbox
-                                </label>
-                            </div>
-                        </div>
-                    </div>
+                        </fieldset>
+                    </section>
 
+                    <section class="bloom-panel bloom-panel--padded">
+                        <div class="flex items-center gap-3">
+                            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-bloom-blush text-sm font-bold text-bloom-rose">4</span>
+                            <div><h2 class="bloom-card-title">Hình thức giao hàng</h2><p class="mt-0.5 text-xs text-bloom-muted">Phí giao hàng sẽ được cộng vào tổng đơn.</p></div>
+                        </div>
+                        <fieldset class="mt-6 grid gap-3">
+                            <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-bloom-line p-3.5 transition hover:border-bloom-rose">
+                                <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="ship_option" id="ship_standard" value="0" checked data-type="ship">
+                                <span><span class="block text-sm font-semibold text-bloom-ink">Giao hàng tiêu chuẩn</span><span class="mt-0.5 block text-xs text-bloom-muted">0₫</span></span>
+                            </label>
+                            <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-bloom-line p-3.5 transition hover:border-bloom-rose">
+                                <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="ship_option" id="ship_express" value="30000" data-type="ship">
+                                <span><span class="block text-sm font-semibold text-bloom-ink">Giao hàng nhanh</span><span class="mt-0.5 block text-xs text-bloom-rose">+30.000₫</span></span>
+                            </label>
+                        </fieldset>
+                    </section>
+
+                    <section class="bloom-panel bloom-panel--padded">
+                        <div class="flex items-center gap-3">
+                            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-bloom-blush text-sm font-bold text-bloom-rose">5</span>
+                            <div><h2 class="bloom-card-title">Ghi chú và thanh toán</h2><p class="mt-0.5 text-xs text-bloom-muted">Chọn một phương thức thanh toán để tiếp tục.</p></div>
+                        </div>
+                        <div class="mt-6">
+                            <label class="bloom-label" for="order_note">Ghi chú cho đơn hàng</label>
+                            <textarea id="order_note" name="order_note" class="bloom-textarea w-full" rows="3" placeholder="Ghi chú thêm cho đơn hàng (nếu có)">{{ old('order_note') }}</textarea>
+                            @error('order_note') <p class="bloom-field-error">{{ $message }}</p> @enderror
+                        </div>
+                        <fieldset class="mt-6 grid gap-3 sm:grid-cols-2">
+                            <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-bloom-line p-4 transition hover:border-bloom-rose">
+                                <input class="mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="payment_method" id="pay_cod" value="cod" @checked(old('payment_method', 'cod') === 'cod')>
+                                <span><span class="flex items-center gap-2 text-sm font-semibold text-bloom-ink"><x-customer.icon name="bag" class="h-4 w-4 text-bloom-rose" />Thanh toán khi nhận hoa</span><span class="mt-1 block text-xs text-bloom-muted">COD</span></span>
+                            </label>
+                            <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-bloom-line p-4 transition hover:border-bloom-rose">
+                                <input class="mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="payment_method" id="pay_paypal" value="paypal" @checked(old('payment_method') === 'paypal')>
+                                <span><span class="flex items-center gap-2 text-sm font-semibold text-bloom-ink"><x-customer.icon name="credit-card" class="h-4 w-4 text-bloom-rose" />PayPal</span><span class="mt-1 block text-xs text-bloom-muted">Thanh toán trực tuyến qua PayPal</span></span>
+                            </label>
+                        </fieldset>
+                        @error('payment_method') <p class="bloom-field-error">{{ $message }}</p> @enderror
+                    </section>
                 </div>
 
-                <!-- Cột phải: Voucher & Tóm tắt đơn thực tế -->
-                <div class="col-lg-5">
-
-                    <!-- Mã giảm giá Voucher -->
-                    <div class="checkout-box">
-                        <div class="section-title">🎟️ Ưu đãi & Giảm giá</div>
-                        @if($activeVouchers->isNotEmpty())
-                            <div class="mb-3">
-                                <small class="text-danger fw-bold">⚡ Flash Sale đang diễn ra:</small>
-                                <div class="d-flex flex-column gap-2 mt-1">
-                                    @foreach($activeVouchers as $voc)
-                                        <div
-                                            class="p-2 border rounded-3 bg-light d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <span class="badge bg-danger">{{ $voc->code }}</span>
-                                                <small class="d-block text-muted"
-                                                    style="font-size: 11px;">{{ $voc->name }}</small>
-                                            </div>
-                                            <button type="button" onclick="applyVoucherCode('{{ $voc->code }}')"
-                                                class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size: 12px;">Áp
-                                                dụng</button>
-                                        </div>
-                                    @endforeach
-                                </div>
+                <aside class="space-y-5 lg:sticky lg:top-28">
+                    <section class="bloom-panel bloom-panel--padded">
+                        <div class="flex items-center gap-2"><x-customer.icon name="gift" class="h-5 w-5 text-bloom-rose" /><h2 class="font-display text-lg font-semibold text-bloom-plum">Ưu đãi & giảm giá</h2></div>
+                        @if ($activeVouchers->isNotEmpty())
+                            <div class="mt-4 space-y-2">
+                                @foreach ($activeVouchers as $voc)
+                                    <div class="flex items-center justify-between gap-3 rounded-lg bg-bloom-blush p-3">
+                                        <div class="min-w-0"><p class="text-xs font-bold tracking-[.08em] text-bloom-rose">{{ $voc->code }}</p><p class="mt-0.5 truncate text-xs text-bloom-muted">{{ $voc->name }}</p></div>
+                                        <button type="button" onclick="applyVoucherCode('{{ $voc->code }}')" class="bloom-button bloom-button--ghost bloom-button--small shrink-0">Chọn</button>
+                                    </div>
+                                @endforeach
                             </div>
                         @endif
-
-                        <div class="input-group">
-                            <input type="text" id="voucher_input_code"
-                                class="form-control text-uppercase font-monospace" placeholder="NHẬP MÃ...">
-                            <button class="btn btn-danger" type="button" onclick="submitVoucher()">Áp dụng</button>
+                        <div class="mt-4 flex gap-2">
+                            <label class="sr-only" for="voucher_input_code">Mã giảm giá</label>
+                            <input type="text" id="voucher_input_code" class="bloom-input h-10 min-w-0 flex-1 px-3 text-sm uppercase" placeholder="NHẬP MÃ...">
+                            <button class="bloom-button bloom-button--small" type="button" onclick="submitVoucher()">Áp dụng</button>
                         </div>
-                    </div>
+                        @if ($voucherCode)
+                            <p class="mt-3 text-xs font-medium text-emerald-700">Đang áp dụng mã {{ $voucherCode }}.</p>
+                        @endif
+                    </section>
 
-                    <!-- Tóm tắt đơn hoa động từ DB -->
-                    <div class="checkout-box">
-                        <div class="section-title">📋 Tóm tắt đơn hàng ({{ $cartItems->sum('quantity') }} sản phẩm)
-                        </div>
-
-                        <!-- Danh sách hoa từ Giỏ hàng -->
-                        <div class="d-flex flex-column gap-2 mb-3 pb-3 border-bottom">
-                            @foreach($cartItems as $item)
-                                <div class="d-flex justify-content-between small">
-                                    <span>{{ $item->product->name ?? 'Hoa tươi' }} &times; {{ $item->quantity }}</span>
-                                    <span
-                                        class="fw-bold">{{ number_format(($item->price ?? $item->product->price) * $item->quantity, 0, ',', '.') }}
-                                        đ</span>
-                                </div>
+                    <section class="bloom-panel bloom-panel--padded">
+                        <div class="flex items-center justify-between gap-3"><h2 class="font-display text-lg font-semibold text-bloom-plum">Tóm tắt đơn hàng</h2><span class="text-xs text-bloom-muted">{{ $cartItems->sum('quantity') }} sản phẩm</span></div>
+                        <div class="mt-4 max-h-52 space-y-3 overflow-y-auto border-b border-bloom-line pb-4">
+                            @foreach ($cartItems as $item)
+                                <div class="flex justify-between gap-3 text-sm"><span class="min-w-0 text-bloom-muted">{{ $item->product->name ?? 'Hoa tươi' }} <span class="whitespace-nowrap">× {{ $item->quantity }}</span></span><span class="whitespace-nowrap font-semibold text-bloom-ink">{{ number_format(($item->price ?? $item->product->price) * $item->quantity, 0, ',', '.') }}₫</span></div>
                             @endforeach
                         </div>
-
-                        <!-- Bảng tính tiền chi tiết -->
-                        <div class="d-flex justify-content-between small text-secondary mb-2">
-                            <span>Tạm tính hoa tươi:</span>
-                            <span class="text-dark fw-bold">{{ number_format($subtotal, 0, ',', '.') }} đ</span>
+                        <div class="mt-4 space-y-2.5 text-sm">
+                            <div class="flex justify-between gap-3"><span class="text-bloom-muted">Tạm tính</span><span class="font-semibold text-bloom-ink">{{ number_format($subtotal, 0, ',', '.') }}₫</span></div>
+                            <div class="flex justify-between gap-3"><span class="text-bloom-muted">Phí giao hàng</span><span id="label_shipping_fee" class="font-semibold text-bloom-ink">0₫</span></div>
+                            <div class="flex justify-between gap-3"><span class="text-bloom-muted">Thiệp chúc</span><span id="label_gift_card_fee" class="font-semibold text-bloom-ink">0₫</span></div>
+                            <div class="flex justify-between gap-3"><span class="text-bloom-muted">Gói quà</span><span id="label_gift_wrap_fee" class="font-semibold text-bloom-ink">0₫</span></div>
+                            <div class="flex justify-between gap-3"><span class="text-bloom-muted">Giảm giá voucher</span><span class="font-semibold text-emerald-700">-{{ number_format($voucherDiscount, 0, ',', '.') }}₫</span></div>
                         </div>
-
-                        <div class="d-flex justify-content-between small text-secondary mb-2">
-                            <span>Phí giao hàng:</span>
-                            <span id="label_shipping_fee" class="fw-semibold text-dark">0 đ</span>
-                        </div>
-
-                        <div class="d-flex justify-content-between small text-secondary mb-2">
-                            <span>Thiệp chúc:</span>
-                            <span id="label_gift_card_fee" class="fw-semibold text-dark">0 đ</span>
-                        </div>
-
-                        <div class="d-flex justify-content-between small text-secondary mb-2">
-                            <span>Gói quà cao cấp:</span>
-                            <span id="label_gift_wrap_fee" class="fw-semibold text-dark">0 đ</span>
-                        </div>
-
-                        <div class="d-flex justify-content-between small text-secondary mb-3">
-                            <span>Giảm giá Voucher:</span>
-                            <span class="text-danger fw-bold">-{{ number_format($voucherDiscount, 0, ',', '.') }}
-                                đ</span>
-                        </div>
-
-                        <hr class="border-light-subtle my-3">
-
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <span class="fw-bold">Tổng thanh toán:</span>
-                            <span id="label_total_amount" class="fs-4 fw-bold text-danger">
-                                {{ number_format(max(0, $subtotal - $voucherDiscount), 0, ',', '.') }} đ
-                            </span>
-                        </div>
-
-                        <button type="submit" class="btn-order shadow-sm">
-                            🔒 Đặt hàng ngay
-                        </button>
-                    </div>
-
-                </div>
+                        <div class="mt-5 flex items-end justify-between gap-3 border-t border-bloom-line pt-4"><span class="font-semibold text-bloom-ink">Tổng thanh toán</span><span id="label_total_amount" class="text-xl font-bold text-bloom-rose">{{ number_format(max(0, $subtotal - $voucherDiscount), 0, ',', '.') }}₫</span></div>
+                        <button type="submit" class="bloom-button mt-5 w-full">Đặt hàng ngay <x-customer.icon name="shield" class="h-4 w-4" /></button>
+                        <p class="mt-3 text-center text-xs leading-5 text-bloom-muted">Khi đặt hàng, bạn đồng ý với các điều khoản giao dịch hiện có của BloomGift.</p>
+                    </section>
+                </aside>
             </div>
         </form>
-    </div>
+    </section>
 
     <script>
         const subtotal = {{ (float) $subtotal }};
         const discount = {{ (float) $voucherDiscount }};
 
         function formatNumber(num) {
-            return new Intl.NumberFormat('vi-VN').format(num) + ' đ';
+            return new Intl.NumberFormat('vi-VN').format(num) + '₫';
         }
 
         function calculateTotal() {
@@ -367,25 +215,19 @@
             const cardFee = parseFloat(document.querySelector('input[name="card_option"]:checked').value);
             const wrapFee = parseFloat(document.querySelector('input[name="wrap_option"]:checked').value);
 
-            // Đổ giá trị vào hidden inputs
             document.getElementById('input_shipping_fee').value = shipFee;
             document.getElementById('input_gift_card_fee').value = cardFee;
             document.getElementById('input_gift_wrap_fee').value = wrapFee;
 
-            // Cập nhật nhãn hiển thị
             document.getElementById('label_shipping_fee').innerText = formatNumber(shipFee);
             document.getElementById('label_gift_card_fee').innerText = formatNumber(cardFee);
             document.getElementById('label_gift_wrap_fee').innerText = formatNumber(wrapFee);
 
-            // Tính tổng tiền cuối cùng
             const finalTotal = Math.max(0, subtotal + shipFee + cardFee + wrapFee - discount);
             document.getElementById('label_total_amount').innerText = formatNumber(finalTotal);
         }
 
-        // Lắng nghe sự kiện thay đổi radio
-        document.querySelectorAll('.option-calc').forEach(radio => {
-            radio.addEventListener('change', calculateTotal);
-        });
+        document.querySelectorAll('.option-calc').forEach(radio => radio.addEventListener('change', calculateTotal));
 
         function applyVoucherCode(code) {
             document.getElementById('voucher_input_code').value = code;
@@ -398,7 +240,6 @@
                 return;
             }
 
-            // Tạo form ảo gửi POST áp dụng voucher
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '{{ route("voucher.apply") }}';
@@ -419,9 +260,6 @@
             form.submit();
         }
 
-        // Chạy tính toán lần đầu khi nạp trang
         calculateTotal();
     </script>
-</body>
-
-</html>
+</x-customer.layout>

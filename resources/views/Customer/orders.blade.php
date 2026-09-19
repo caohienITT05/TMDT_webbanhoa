@@ -1,130 +1,85 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đơn hàng của tôi - BloomGift</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-rose: #e11d48;
-            --soft-rose: #fff0f3;
-            --border-rose: #ffe4e6;
-        }
-        body { background-color: #fffafb; font-family: system-ui, -apple-system, sans-serif; color: #374151; }
-        .order-card { background: #fff; border-radius: 16px; border: 1px solid var(--border-rose); margin-bottom: 20px; box-shadow: 0 4px 15px rgba(225, 29, 72, 0.04); overflow: hidden; }
-        .status-badge { padding: 6px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
-        .status-pending { background: #fef3c7; color: #92400e; }
-        .status-confirmed { background: #e0e7ff; color: #3730a3; }
-        .status-preparing { background: #fce7f3; color: #9d174d; }
-        .status-shipping { background: #e0f2fe; color: #0369a1; }
-        .status-completed { background: #dcfce7; color: #166534; }
-        .status-cancelled { background: #fee2e2; color: #991b1b; }
-    </style>
-</head>
-<body>
+<x-customer.layout title="Đơn hàng của tôi">
+    <x-customer.breadcrumb :items="[
+        ['label' => 'Trang chủ', 'url' => route('home')],
+        ['label' => 'Đơn hàng của tôi'],
+    ]" />
 
-<div class="container py-5" style="max-width: 900px;">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-        <div>
-            <h2 class="h4 fw-bold text-dark mb-1">🌸 Đơn đặt hoa của bạn</h2>
-            <p class="text-muted small mb-0">Theo dõi trạng thái chuẩn bị hoa, cắm hoa và lịch giao tận nơi</p>
-        </div>
-        <a href="{{ url('/') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-            &larr; Về trang chủ
-        </a>
-    </div>
-
-    @if(session('success'))
-        <div class="alert alert-success border-0 shadow-sm rounded-3 py-2 small mb-4">
-            ✅ {{ session('success') }}
-        </div>
-    @endif
-
-    @if($orders->isEmpty())
-        <div class="order-card p-5 text-center">
-            <div class="display-3 mb-3">🌷</div>
-            <h5 class="fw-bold text-secondary">Bạn chưa có đơn đặt hoa nào</h5>
-            <p class="text-muted small">Hãy chọn những mẫu hoa tươi thắm nhất gửi tặng người thương nhé!</p>
-            <a href="{{ route('products.index') }}" class="btn text-white rounded-pill px-4 py-2 mt-2" style="background-color: var(--primary-rose);">
-                Khám phá các mẫu hoa
-            </a>
-        </div>
-    @else
-        @foreach($orders as $order)
-            <div class="order-card">
-                <!-- Header của Card -->
-                <div class="p-3 d-flex justify-content-between align-items-center border-bottom" style="background-color: var(--soft-rose);">
-                    <div>
-                        <span class="fw-bold text-dark me-2">Mã đơn: #{{ $order->order_code ?? ('BG-' . $order->id) }}</span>
-                        <span class="text-muted small">| Ngày đặt: {{ $order->created_at->format('d/m/Y H:i') }}</span>
-                    </div>
-                    <div>
-                        @php
-                            $status = strtoupper($order->status ?? $order->order_status ?? 'PENDING');
-                        @endphp
-                        @if($status === 'PENDING')
-                            <span class="status-badge status-pending">⏳ Chờ tiệm duyệt</span>
-                        @elseif($status === 'CONFIRMED')
-                            <span class="status-badge status-confirmed">✓ Đã xác nhận</span>
-                        @elseif($status === 'PREPARING')
-                            <span class="status-badge status-preparing">💐 Đang cắm hoa</span>
-                        @elseif($status === 'SHIPPING')
-                            <span class="status-badge status-shipping">🚚 Đang giao hoa</span>
-                        @elseif($status === 'COMPLETED' || $status === 'DELIVERED')
-                            <span class="status-badge status-completed">🎉 Giao thành công</span>
-                        @else
-                            <span class="status-badge status-cancelled">✕ Đã hủy</span>
-                        @endif
-                    </div>
-                </div>
-
-                <!-- Thân đơn hàng -->
-                <div class="p-4">
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6 small">
-                            <p class="mb-1 text-secondary">👤 <strong>Người nhận:</strong> {{ $order->recipient_name }} ({{ $order->recipient_phone }})</p>
-                            <p class="mb-1 text-secondary">📍 <strong>Địa chỉ giao:</strong> {{ $order->recipient_address }}</p>
-                            <p class="mb-0 text-secondary">⏰ <strong>Lịch giao hoa:</strong> {{ \Carbon\Carbon::parse($order->delivery_date)->format('d/m/Y') }} ({{ $order->deliverySlot->name ?? 'Tiêu chuẩn' }})</p>
-                        </div>
-                        <div class="col-md-6 small text-md-end">
-                            <p class="mb-1 text-secondary">Phương thức: <strong>{{ strtoupper($order->payment_method) }}</strong></p>
-                            <p class="mb-1">Trạng thái thanh toán: 
-                                <span class="badge {{ $order->payment_status === 'paid' ? 'bg-success' : 'bg-warning text-dark' }}">
-                                    {{ $order->payment_status === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán' }}
-                                </span>
-                            </p>
-                            @if($order->note)
-                                <p class="mb-0 text-muted fst-italic">{{ $order->note }}</p>
-                            @endif
-                        </div>
-                    </div>
-
-                    <!-- Danh sách sản phẩm hoa -->
-                    <div class="border-top pt-3">
-                        @foreach($order->orderItems as $item)
-                            <div class="d-flex justify-content-between align-items-center py-1 small">
-                                <span>🌸 {{ $item->product_name ?? ($item->product->name ?? 'Hoa tươi') }} &times; <strong>{{ $item->quantity }}</strong></span>
-                                <span class="fw-semibold text-dark">{{ number_format($item->subtotal ?? ($item->price * $item->quantity), 0, ',', '.') }} đ</span>
-                            </div>
-                        @endforeach
-                    </div>
-
-                    <!-- Tổng tiền thanh toán -->
-                    <div class="border-top mt-3 pt-3 d-flex justify-content-between align-items-center">
-                        <span class="small text-muted">Tổng thanh toán (gồm ship & ưu đãi):</span>
-                        <span class="fs-5 fw-bold text-danger">{{ number_format($order->total ?? $order->total_amount, 0, ',', '.') }} đ</span>
-                    </div>
-                </div>
+    <section class="bloom-shell pb-14 sm:pb-20">
+        <div class="flex flex-wrap items-end justify-between gap-4 border-b border-bloom-line pb-7">
+            <div>
+                <p class="bloom-eyebrow">Tài khoản BloomGift</p>
+                <h1 class="bloom-title mt-2">Đơn hàng của tôi</h1>
+                <p class="bloom-subtitle mt-3">Theo dõi trạng thái đơn, thông tin nhận hoa và thanh toán của bạn.</p>
             </div>
-        @endforeach
-
-        <div class="d-flex justify-content-center mt-4">
-            {{ $orders->links() }}
+            <a href="{{ route('products.index') }}" class="bloom-button bloom-button--ghost bloom-button--small">Tiếp tục mua sắm</a>
         </div>
-    @endif
-</div>
 
-</body>
-</html>
+        @if ($orders->isEmpty())
+            <div class="bloom-empty mt-8">
+                <span class="flex h-14 w-14 items-center justify-center rounded-full bg-bloom-blush text-bloom-rose"><x-customer.icon name="receipt" class="h-6 w-6" /></span>
+                <h2 class="mt-4 font-display text-xl font-semibold text-bloom-plum">Bạn chưa có đơn hàng nào</h2>
+                <p class="mt-2 max-w-md text-sm leading-6 text-bloom-muted">Khám phá những sản phẩm đang có để bắt đầu một đơn hoa thật ý nghĩa.</p>
+                <a href="{{ route('products.index') }}" class="bloom-button mt-5">Khám phá sản phẩm</a>
+            </div>
+        @else
+            <div class="mt-8 space-y-4">
+                @foreach ($orders as $order)
+                    @php
+                        $orderStatus = $order->order_status ?? $order->status ?? 'pending';
+                        $orderTotal = $order->total ?? $order->total_amount ?? 0;
+                        $items = $order->orderItems;
+                    @endphp
+                    <article class="bloom-panel overflow-hidden">
+                        <div class="flex flex-col gap-3 border-b border-bloom-line bg-bloom-blush/55 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p class="font-display text-lg font-semibold text-bloom-plum">{{ $order->order_code ?? ('BG-' . $order->id) }}</p>
+                                <p class="mt-0.5 text-xs text-bloom-muted">Đặt ngày {{ $order->created_at?->format('d/m/Y · H:i') }}</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <x-customer.status-badge :status="$orderStatus" />
+                                <x-customer.status-badge :status="($order->payment_status ?? 'pending')" type="payment" />
+                            </div>
+                        </div>
+                        <div class="grid gap-5 p-5 lg:grid-cols-[1fr_auto] lg:items-end">
+                            <div class="grid gap-5 sm:grid-cols-2">
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-[.1em] text-bloom-muted">Người nhận</p>
+                                    <p class="mt-1.5 text-sm font-semibold text-bloom-ink">{{ $order->recipient_name ?: 'Chưa cập nhật' }}</p>
+                                    <p class="mt-1 text-sm leading-5 text-bloom-muted">{{ $order->recipient_phone }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-[.1em] text-bloom-muted">Lịch giao</p>
+                                    <p class="mt-1.5 text-sm font-semibold text-bloom-ink">{{ $order->delivery_date ? \Carbon\Carbon::parse($order->delivery_date)->format('d/m/Y') : 'Chưa chọn ngày' }}</p>
+                                    <p class="mt-1 text-sm leading-5 text-bloom-muted">{{ $order->deliverySlot?->name ?: 'Chưa chọn khung giờ' }}</p>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <p class="text-xs font-bold uppercase tracking-[.1em] text-bloom-muted">Sản phẩm</p>
+                                    <p class="mt-1.5 text-sm leading-6 text-bloom-muted">
+                                        @forelse ($items->take(2) as $item)
+                                            <span class="text-bloom-ink">{{ $item->product_name ?? $item->product?->name ?? 'Hoa tươi' }}</span> × {{ $item->quantity }}@if (! $loop->last), @endif
+                                        @empty
+                                            Chưa có sản phẩm hiển thị
+                                        @endforelse
+                                        @if ($items->count() > 2) <span> và {{ $items->count() - 2 }} sản phẩm khác</span> @endif
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-start gap-3 border-t border-bloom-line pt-4 sm:flex-row sm:items-center sm:justify-between lg:block lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                                <div class="lg:text-right">
+                                    <p class="text-xs font-bold uppercase tracking-[.1em] text-bloom-muted">Tổng thanh toán</p>
+                                    <p class="mt-1 text-xl font-bold text-bloom-rose">{{ number_format((float) $orderTotal, 0, ',', '.') }}₫</p>
+                                    <p class="mt-1 text-xs text-bloom-muted">{{ $order->payment_method === 'paypal' ? 'PayPal' : 'COD' }}</p>
+                                </div>
+                                <a href="{{ route('orders.show', $order) }}" class="bloom-button bloom-button--ghost bloom-button--small lg:mt-4">Xem chi tiết <x-customer.icon name="arrow-right" class="h-4 w-4" /></a>
+                            </div>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+
+            @if ($orders->hasPages())
+                <div class="mt-10 border-t border-bloom-line pt-6">{{ $orders->onEachSide(1)->links() }}</div>
+            @endif
+        @endif
+    </section>
+</x-customer.layout>

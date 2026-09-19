@@ -1,39 +1,29 @@
 <x-guest-layout>
-    <form method="POST" action="{{ route('password.store') }}">
-        @csrf
-
-        <!-- Password Reset Token -->
-        <input type="hidden" name="token" value="{{ $request->route('token') }}">
-
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email', $request->email)" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
-
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
-            <x-text-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="new-password" />
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
-
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
-
-            <x-text-input id="password_confirmation" class="block mt-1 w-full"
-                                type="password"
-                                name="password_confirmation" required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Reset Password') }}
-            </x-primary-button>
-        </div>
-    </form>
+    <div class="border-b border-bloom-line bg-bloom-blush px-6 py-7 sm:px-8">
+        <p class="bloom-eyebrow">Bảo mật tài khoản</p>
+        <h1 class="mt-2 font-display text-3xl font-semibold tracking-[-.035em] text-bloom-plum">Đặt lại mật khẩu</h1>
+        <p class="mt-2 text-sm leading-6 text-bloom-muted">Tạo một mật khẩu mới để quay lại tài khoản BloomGift của bạn.</p>
+    </div>
+    <div class="px-6 py-7 sm:px-8">
+        <form method="POST" action="{{ route('password.store') }}" class="space-y-5">
+            @csrf
+            <input type="hidden" name="token" value="{{ $request->route('token') }}">
+            <div>
+                <label class="bloom-label" for="email">Địa chỉ email</label>
+                <input id="email" type="email" name="email" value="{{ old('email', $request->email) }}" required autofocus autocomplete="username" class="bloom-input h-11 w-full px-3">
+                @error('email') <p class="bloom-field-error">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="bloom-label" for="password">Mật khẩu mới</label>
+                <input id="password" type="password" name="password" required autocomplete="new-password" class="bloom-input h-11 w-full px-3">
+                @error('password') <p class="bloom-field-error">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="bloom-label" for="password_confirmation">Xác nhận mật khẩu mới</label>
+                <input id="password_confirmation" type="password" name="password_confirmation" required autocomplete="new-password" class="bloom-input h-11 w-full px-3">
+                @error('password_confirmation') <p class="bloom-field-error">{{ $message }}</p> @enderror
+            </div>
+            <button type="submit" class="bloom-button w-full">Đặt lại mật khẩu <x-customer.icon name="shield" class="h-4 w-4" /></button>
+        </form>
+    </div>
 </x-guest-layout>

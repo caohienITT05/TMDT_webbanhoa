@@ -1,107 +1,93 @@
-<!DOCTYPE html>
-<html lang="vi">
+@extends('layouts.admin')
 
-<head>
-    <meta charset="UTF-8">
-    <title>Quản lý Mã Khuyến Mại - BloomGift Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-</head>
+@section('title', 'Khuyến mại & Voucher')
 
-<body class="bg-light p-4">
-    <div class="container-fluid bg-white rounded shadow-sm p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="fw-bold text-danger mb-0"><i class="bi bi-ticket-perforated me-2"></i>Danh sách Mã Giảm Giá &
-                Flash Sale</h3>
+@section('content')
+    <div class="admin-page space-y-5">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-secondary me-2"><i
-                        class="bi bi-arrow-left"></i> Dashboard</a>
-                <a href="{{ route('admin.vouchers.create') }}" class="btn btn-danger"><i
-                        class="bi bi-plus-circle me-1"></i> Tạo Voucher mới</a>
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-rose-500">Khuyến mại</p>
+                <h1 class="admin-page-title mt-1">Mã giảm giá & Flash Sale</h1>
+                <p class="admin-page-subtitle">Thiết lập ưu đãi và theo dõi thời gian áp dụng.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <x-admin.button :href="route('admin.dashboard')" variant="secondary">Quay lại Dashboard</x-admin.button>
+                <x-admin.button :href="route('admin.vouchers.create')" variant="primary">
+                    <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v12M4 10h12" stroke-linecap="round" /></svg>
+                    Tạo voucher mới
+                </x-admin.button>
             </div>
         </div>
 
         @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show">
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">
                 {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
 
-        <div class="table-responsive">
-            <table class="table table-hover align-middle border">
-                <thead class="table-danger">
-                    <tr>
-                        <th>Mã Code</th>
-                        <th>Tên chương trình</th>
-                        <th>Mức giảm</th>
-                        <th>Đơn tối thiểu</th>
-                        <th>Khung giờ áp dụng</th>
-                        <th>Lượt dùng</th>
-                        <th>Trạng thái</th>
-                        <th class="text-center">Hành động</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($vouchers as $v)
-                        @php
-                            $now = now();
-                            $isOngoing = $now->between($v->start_time, $v->end_time);
-                            $isExpired = $now->gt($v->end_time);
-                        @endphp
+        <div class="admin-panel overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[980px] text-left text-sm text-gray-600">
+                    <thead class="border-b border-rose-100 bg-rose-50/70 text-[11px] font-bold uppercase tracking-wide text-rose-900">
                         <tr>
-                            <td><span class="badge bg-danger fs-6">{{ $v->code }}</span></td>
-                            <td><strong>{{ $v->name }}</strong></td>
-                            <td class="text-danger fw-bold">
-                                {{ $v->type === 'percent' ? $v->value . '%' : number_format($v->value) . ' đ' }}
-                                @if($v->max_discount)
-                                    <div class="small text-muted">(Tối đa {{ number_format($v->max_discount) }}đ)</div>
-                                @endif
-                            </td>
-                            <td>{{ number_format($v->min_order_amount) }} đ</td>
-                            <td>
-                                <small class="d-block">Từ:
-                                    <strong>{{ $v->start_time->format('H:i d/m/Y') }}</strong></small>
-                                <small class="d-block">Đến: <strong>{{ $v->end_time->format('H:i d/m/Y') }}</strong></small>
-                            </td>
-                            <td>{{ $v->used_count }} / {{ $v->usage_limit }}</td>
-                            <td>
-                                @if(!$v->is_active)
-                                    <span class="badge bg-secondary">Tạm tắt</span>
-                                @elseif($isExpired)
-                                    <span class="badge bg-dark">Đã hết hạn</span>
-                                @elseif($isOngoing)
-                                    <span class="badge bg-success">Đang diễn ra</span>
-                                @else
-                                    <span class="badge bg-warning text-dark">Sắp diễn ra</span>
-                                @endif
-                            </td>
-                            <td class="text-center">
-                                <a href="{{ route('admin.vouchers.edit', $v) }}"
-                                    class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil"></i></a>
-                                <form action="{{ route('admin.vouchers.destroy', $v) }}" method="POST" class="d-inline"
-                                    onsubmit="return confirm('Bạn có chắc chắn muốn xóa?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i
-                                            class="bi bi-trash"></i></button>
-                                </form>
-                            </td>
+                            <th class="px-5 py-3.5">Mã code</th>
+                            <th class="px-5 py-3.5">Chương trình</th>
+                            <th class="px-5 py-3.5">Mức giảm</th>
+                            <th class="px-5 py-3.5">Đơn tối thiểu</th>
+                            <th class="px-5 py-3.5">Thời gian áp dụng</th>
+                            <th class="px-5 py-3.5">Lượt dùng</th>
+                            <th class="px-5 py-3.5">Trạng thái</th>
+                            <th class="px-5 py-3.5 text-right">Thao tác</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="8" class="text-center text-muted py-4">Chưa có mã khuyến mại nào. Nhấn "Tạo Voucher
-                                mới" để thêm.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        <div class="mt-3">
-            {{ $vouchers->links() }}
+                    </thead>
+                    <tbody class="divide-y divide-rose-50">
+                        @forelse($vouchers as $voucher)
+                            @php
+                                $now = now();
+                                $isOngoing = $now->between($voucher->start_time, $voucher->end_time);
+                                $isExpired = $now->gt($voucher->end_time);
+                                [$voucherLabel, $voucherTone] = !$voucher->is_active
+                                    ? ['Tạm tắt', 'neutral']
+                                    : ($isExpired ? ['Đã hết hạn', 'danger'] : ($isOngoing ? ['Đang diễn ra', 'success'] : ['Sắp diễn ra', 'warning']));
+                            @endphp
+                            <tr class="transition-colors hover:bg-rose-50/35">
+                                <td class="px-5 py-4"><span class="font-mono text-xs font-bold text-rose-700">{{ $voucher->code }}</span></td>
+                                <td class="px-5 py-4 font-medium text-gray-900">{{ $voucher->name }}</td>
+                                <td class="px-5 py-4 font-semibold text-gray-900">
+                                    {{ $voucher->type === 'percent' ? $voucher->value . '%' : number_format($voucher->value) . ' đ' }}
+                                    @if($voucher->max_discount)
+                                        <p class="mt-0.5 text-xs font-normal text-gray-400">Tối đa {{ number_format($voucher->max_discount) }} đ</p>
+                                    @endif
+                                </td>
+                                <td class="px-5 py-4">{{ number_format($voucher->min_order_amount) }} đ</td>
+                                <td class="px-5 py-4 text-xs leading-5 text-gray-600">
+                                    <p>Từ {{ $voucher->start_time->format('H:i d/m/Y') }}</p>
+                                    <p>Đến {{ $voucher->end_time->format('H:i d/m/Y') }}</p>
+                                </td>
+                                <td class="px-5 py-4">{{ $voucher->used_count }} / {{ $voucher->usage_limit }}</td>
+                                <td class="px-5 py-4"><span class="admin-badge admin-badge--{{ $voucherTone }}">{{ $voucherLabel }}</span></td>
+                                <td class="px-5 py-4 text-right">
+                                    <div class="admin-table-actions">
+                                        <x-admin.button :href="route('admin.vouchers.edit', $voucher)" variant="detail" size="sm">Sửa</x-admin.button>
+                                        <form action="{{ route('admin.vouchers.destroy', $voucher) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa voucher này?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <x-admin.button type="submit" variant="danger" size="sm">Xóa</x-admin.button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="px-5 py-12 text-center text-sm text-gray-400">Chưa có mã khuyến mại nào.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <div class="border-t border-rose-50 px-5 py-4">
+                <x-admin.pagination :paginator="$vouchers" item-label="voucher" />
+            </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-
-</html>
+@endsection

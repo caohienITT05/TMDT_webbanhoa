@@ -7,9 +7,7 @@
         <!-- Tiêu đề -->
         <div class="flex items-center justify-between">
             <div>
-                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    🌸 Quản lý khung giờ giao hoa (Delivery Slots)
-                </h2>
+                <h2 class="admin-page-title">Quản lý khung giờ giao hoa</h2>
                 <p class="text-xs text-gray-500 mt-1">Thiết lập các ca giao hàng trong ngày. Tạm khóa ca khi lượng đơn cắm
                     hoa quá tải.</p>
             </div>
@@ -26,9 +24,7 @@
 
             <!-- Cột trái: Form thêm khung giờ mới -->
             <div class="bg-white p-5 rounded-2xl border border-rose-100 shadow-sm h-fit">
-                <h3 class="text-sm font-bold text-gray-800 mb-4 pb-2 border-b border-rose-50 flex items-center gap-2">
-                    ➕ Thêm ca giao mới
-                </h3>
+                <h3 class="mb-4 border-b border-rose-50 pb-2 text-sm font-bold text-gray-800">Thêm ca giao mới</h3>
 
                 <form action="{{ route('admin.delivery-slots.store') }}" method="POST" class="space-y-4">
                     @csrf
@@ -49,10 +45,7 @@
                         </label>
                     </div>
 
-                    <button type="submit" style="background-color: #e11d48; color: #ffffff;"
-                        class="w-full py-2.5 rounded-xl font-bold text-xs shadow-sm hover:opacity-95 transition">
-                        Thêm khung giờ
-                    </button>
+                    <x-admin.button type="submit" variant="primary" class="w-full">Thêm khung giờ</x-admin.button>
                 </form>
             </div>
 
@@ -82,18 +75,13 @@
                                     </td>
                                     <td class="py-3 px-4 text-center">
                                         @if($slot->is_active)
-                                            <span
-                                                class="px-2.5 py-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 rounded-full">
-                                                ● Đang mở
-                                            </span>
+                                            <span class="admin-badge admin-badge--success">Đang mở</span>
                                         @else
-                                            <span class="px-2.5 py-1 text-[11px] font-bold text-gray-500 bg-gray-100 rounded-full">
-                                                ✕ Tạm khóa
-                                            </span>
+                                            <span class="admin-badge admin-badge--neutral">Tạm khóa</span>
                                         @endif
                                     </td>
                                     <td class="py-3 px-4 text-right">
-                                        <div class="flex items-center justify-end gap-3">
+                                        <div class="admin-table-actions justify-end">
                                             <!-- Form bật/tắt nhanh -->
                                             <form action="{{ route('admin.delivery-slots.update', $slot) }}" method="POST"
                                                 class="inline">
@@ -101,18 +89,10 @@
                                                 @method('PUT')
                                                 <input type="hidden" name="name" value="{{ $slot->name }}">
                                                 @if($slot->is_active)
-                                                    <button type="submit"
-                                                        class="text-xs text-amber-600 hover:underline font-semibold"
-                                                        title="Khóa ca khi quá tải đơn">
-                                                        Khóa ca
-                                                    </button>
+                                                    <x-admin.button type="submit" variant="secondary" size="sm" title="Khóa ca khi quá tải đơn">Khóa ca</x-admin.button>
                                                 @else
                                                     <input type="hidden" name="is_active" value="1">
-                                                    <button type="submit"
-                                                        class="text-xs text-emerald-600 hover:underline font-semibold"
-                                                        title="Mở nhận đơn trở lại">
-                                                        Mở lại
-                                                    </button>
+                                                    <x-admin.button type="submit" variant="detail" size="sm" title="Mở nhận đơn trở lại">Mở lại</x-admin.button>
                                                 @endif
                                             </form>
 
@@ -121,10 +101,7 @@
                                                 onsubmit="return confirm('Bạn có chắc muốn xóa ca giao này?');" class="inline">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit"
-                                                    class="text-xs text-rose-500 hover:underline font-semibold">
-                                                    Xóa
-                                                </button>
+                                                <x-admin.button type="submit" variant="danger" size="sm">Xóa</x-admin.button>
                                             </form>
                                         </div>
                                     </td>
