@@ -579,6 +579,10 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ route('customer.orders') }}" style="color: #e11d48; font-weight: 600;">📦 Đơn hàng
+                                của tôi</a>
+                        </li>
+                        <li>
                             <hr class="dropdown-divider">
                         </li>
                         <li>

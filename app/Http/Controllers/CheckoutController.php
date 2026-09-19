@@ -142,6 +142,7 @@ class CheckoutController extends Controller
         }
         $fullNote = !empty($noteParts) ? implode(" | ", $noteParts) : null;
 
+
         // Lưu đơn hàng an toàn qua DB Transaction
         $order = DB::transaction(function () use ($validated, $orderProducts, $subtotal, $discount, $shippingFee, $total, $fullNote) {
             $orderCode = 'BG' . now()->format('YmdHis') . strtoupper(Str::random(4));
@@ -149,7 +150,6 @@ class CheckoutController extends Controller
             $order = Order::create([
                 'user_id' => Auth::id(),
                 'order_code' => $orderCode,
-                'order_number' => $orderCode,
                 'recipient_name' => $validated['recipient_name'],
                 'recipient_phone' => $validated['recipient_phone'],
                 'recipient_address' => $validated['recipient_address'],
@@ -157,7 +157,6 @@ class CheckoutController extends Controller
                 'delivery_slot_id' => $validated['delivery_slot_id'],
                 'subtotal' => $subtotal,
                 'discount' => $discount,
-                'discount_amount' => $discount,
                 'shipping_fee' => $shippingFee,
                 'total' => $total,
                 'total_amount' => $total,

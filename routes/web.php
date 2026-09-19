@@ -197,6 +197,14 @@ Route::middleware('auth')->group(function () {
 
     // Trang xem đơn hàng sau khi đặt thành công
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+    // Xem danh sách và theo dõi đơn hàng của khách hàng (UC14)
+    Route::get('/don-hang-cua-toi', function () {
+        $orders = \App\Models\Order::where('user_id', auth()->id())
+            ->with(['orderItems.product', 'deliverySlot'])
+            ->latest()
+            ->paginate(10);
+        return view('Customer.orders', compact('orders'));
+    })->name('customer.orders');
 });
 
 /*
