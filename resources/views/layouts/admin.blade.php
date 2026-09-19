@@ -12,65 +12,207 @@
 <body class="bg-[#fff5f7] font-sans antialiased text-gray-700">
     <div class="min-h-screen flex">
         <!-- Sidebar Hồng Pastel -->
-        <aside class="w-64 bg-white border-r border-rose-100 flex flex-col justify-between shrink-0 shadow-sm relative">
-            <div>
-                <!-- Logo BloomGift -->
-                <div class="h-16 flex items-center px-6 gap-2 border-b border-rose-100/70">
-                    <span class="text-2xl">🌸</span>
-                    <span class="font-bold text-lg text-rose-500 tracking-wide">BloomGift Admin</span>
+        <!-- ========================================================
+     SIDEBAR ADMIN - THEME ĐEN SANG TRỌNG & ICON VECTOR VECTOR
+     ======================================================== -->
+        <aside class="w-64 min-h-screen flex flex-col justify-between shrink-0 shadow-2xl relative select-none"
+            style="background: #14151f; color: #94a3b8; font-family: system-ui, -apple-system, sans-serif;">
+
+            <div class="p-5">
+                <!-- Logo BloomGift Admin -->
+                <div class="flex items-center gap-3 px-2 py-3 mb-6 border-b border-gray-800/80">
+                    <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-rose-500 shadow-md"
+                        style="background: rgba(244, 63, 94, 0.12); border: 1px solid rgba(244, 63, 94, 0.25);">
+                        <!-- Icon Hoa Logo -->
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21V12m0 0a4.5 4.5 0 004.5-4.5c0-1.5-.7-2.5-1.5-3m-3 7.5a4.5 4.5 0 01-4.5-4.5c0-1.5.7-2.5 1.5-3m6 0a3 3 0 00-6 0m6 0c.5.8.5 1.8 0 2.5m-6-2.5c-.5.8-.5 1.8 0 2.5" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-[15px] font-bold text-white tracking-wide leading-tight">BloomGift</h1>
+                        <p class="text-[11px] font-medium tracking-wider text-gray-500">Admin Panel</p>
+                    </div>
                 </div>
 
-                <!-- Navigation Menu -->
-                <nav class="p-4 space-y-1.5 text-sm font-medium">
+                <!-- Navigation Links -->
+                <nav class="space-y-1.5 text-xs font-medium">
+
+                    <!-- 1. Trang chủ / Bảng điều khiển -->
                     <a href="{{ route('admin.dashboard') }}"
-                        class="flex items-center gap-3 px-4 py-2.5 rounded-full transition {{ request()->routeIs('admin.dashboard') ? 'bg-[#ffe2e8] text-rose-600 font-bold shadow-sm' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-500' }}">
-                        <span>📊</span> Bảng điều khiển
+                        class="flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group {{ request()->routeIs('admin.dashboard') ? 'font-bold shadow-md' : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]' }}"
+                        style="{{ request()->routeIs('admin.dashboard') ? 'background: linear-gradient(90deg, #fbcfe8 0%, #ffd7e2 100%); color: #1e1b24;' : '' }}">
+                        <div class="flex items-center gap-3">
+                            <!-- Icon Nhà -->
+                            <svg class="w-4 h-4 {{ request()->routeIs('admin.dashboard') ? 'text-gray-900' : 'text-gray-400 group-hover:text-white' }}"
+                                fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            <span>Trang chủ</span>
+                        </div>
+                        @if(!request()->routeIs('admin.dashboard'))
+                            <svg class="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" fill="none"
+                                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        @endif
                     </a>
-                    <a href="{{ route('admin.categories.index') }}"
-                        class="flex items-center gap-3 px-4 py-2.5 rounded-full transition {{ request()->routeIs('admin.categories.*') ? 'bg-[#ffe2e8] text-rose-600 font-bold shadow-sm' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-500' }}">
-                        <span>🏷️</span> Quản lý danh mục
-                    </a>
-                    <a href="{{ route('admin.users.index') }}"
-                        class="flex items-center gap-3 px-4 py-2.5 rounded-full transition {{ request()->routeIs('admin.users.*') ? 'bg-[#ffe2e8] text-rose-600 font-bold shadow-sm' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-500' }}">
-                        <span>👥</span> Quản lý người dùng
-                    </a>
+
+                    <!-- 2. Quản lý sản phẩm hoa -->
                     <a href="{{ route('admin.products.index') }}"
-                        class="flex items-center gap-3 px-4 py-2.5 rounded-full transition {{ request()->routeIs('admin.products.*') ? 'bg-[#ffe2e8] text-rose-600 font-bold shadow-sm' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-500' }}">
-                        <span>💐</span> Quản lý sản phẩm
+                        class="flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group {{ request()->routeIs('admin.products.*') ? 'font-bold shadow-md' : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]' }}"
+                        style="{{ request()->routeIs('admin.products.*') ? 'background: linear-gradient(90deg, #fbcfe8 0%, #ffd7e2 100%); color: #1e1b24;' : '' }}">
+                        <div class="flex items-center gap-3">
+                            <!-- Icon Khối hộp sản phẩm -->
+                            <svg class="w-4 h-4 {{ request()->routeIs('admin.products.*') ? 'text-gray-900' : 'text-gray-400 group-hover:text-white' }}"
+                                fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                            <span>Quản lý sản phẩm</span>
+                        </div>
+                        @if(!request()->routeIs('admin.products.*'))
+                            <svg class="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" fill="none"
+                                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        @endif
                     </a>
+
+                    <!-- 3. Quản lý đơn hàng -->
                     <a href="{{ route('admin.orders.index') }}"
-                        class="flex items-center gap-3 px-4 py-2.5 rounded-full transition {{ request()->routeIs('admin.orders.*') ? 'bg-[#ffe2e8] text-rose-600 font-bold shadow-sm' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-500' }}">
-                        <span>🛒</span> Quản lý đơn hàng
+                        class="flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group {{ request()->routeIs('admin.orders.*') ? 'font-bold shadow-md' : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]' }}"
+                        style="{{ request()->routeIs('admin.orders.*') ? 'background: linear-gradient(90deg, #fbcfe8 0%, #ffd7e2 100%); color: #1e1b24;' : '' }}">
+                        <div class="flex items-center gap-3">
+                            <!-- Icon Thư mục tài liệu / Hóa đơn -->
+                            <svg class="w-4 h-4 {{ request()->routeIs('admin.orders.*') ? 'text-gray-900' : 'text-gray-400 group-hover:text-white' }}"
+                                fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                            </svg>
+                            <span>Quản lý đơn hàng</span>
+                        </div>
+                        @if(!request()->routeIs('admin.orders.*'))
+                            <svg class="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" fill="none"
+                                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        @endif
                     </a>
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"
-                            href="{{ route('admin.vouchers.index') }}">
-                            <i class="bi bi-ticket-perforated me-2"></i>
-                            <span>Quản lý Voucher & Khuyến mại</span>
-                        </a>
-                    </li>
-                    <!-- Quản lý khung giờ giao hoa -->
+
+                    <!-- 4. Quản lý danh mục dịp lễ -->
+                    <a href="{{ route('admin.categories.index') }}"
+                        class="flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group {{ request()->routeIs('admin.categories.*') ? 'font-bold shadow-md' : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]' }}"
+                        style="{{ request()->routeIs('admin.categories.*') ? 'background: linear-gradient(90deg, #fbcfe8 0%, #ffd7e2 100%); color: #1e1b24;' : '' }}">
+                        <div class="flex items-center gap-3">
+                            <!-- Icon Thẻ Tag danh mục -->
+                            <svg class="w-4 h-4 {{ request()->routeIs('admin.categories.*') ? 'text-gray-900' : 'text-gray-400 group-hover:text-white' }}"
+                                fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                            <span>Quản lý danh mục</span>
+                        </div>
+                        @if(!request()->routeIs('admin.categories.*'))
+                            <svg class="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" fill="none"
+                                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        @endif
+                    </a>
+
+                    <!-- 5. Khuyến mại & Voucher -->
+                    <a href="{{ route('admin.vouchers.index') }}"
+                        class="flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group {{ request()->routeIs('admin.vouchers.*') ? 'font-bold shadow-md' : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]' }}"
+                        style="{{ request()->routeIs('admin.vouchers.*') ? 'background: linear-gradient(90deg, #fbcfe8 0%, #ffd7e2 100%); color: #1e1b24;' : '' }}">
+                        <div class="flex items-center gap-3">
+                            <!-- Icon Vé Voucher / Kim cương -->
+                            <svg class="w-4 h-4 {{ request()->routeIs('admin.vouchers.*') ? 'text-gray-900' : 'text-gray-400 group-hover:text-white' }}"
+                                fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                            </svg>
+                            <span>Khuyến mại & Voucher</span>
+                        </div>
+                        @if(!request()->routeIs('admin.vouchers.*'))
+                            <svg class="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" fill="none"
+                                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        @endif
+                    </a>
+
+                    <!-- 6. Quản lý khung giờ giao nhận hoa -->
                     <a href="{{ route('admin.delivery-slots.index') }}"
-                        class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition {{ request()->routeIs('admin.delivery-slots.*') ? 'bg-rose-100 text-rose-700 font-bold' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-600' }}">
-                        <span>⏰</span>
-                        <span>Quản lý khung giờ</span>
+                        class="flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group {{ request()->routeIs('admin.delivery-slots.*') ? 'font-bold shadow-md' : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]' }}"
+                        style="{{ request()->routeIs('admin.delivery-slots.*') ? 'background: linear-gradient(90deg, #fbcfe8 0%, #ffd7e2 100%); color: #1e1b24;' : '' }}">
+                        <div class="flex items-center gap-3">
+                            <!-- Icon Đồng hồ khung giờ -->
+                            <svg class="w-4 h-4 {{ request()->routeIs('admin.delivery-slots.*') ? 'text-gray-900' : 'text-gray-400 group-hover:text-white' }}"
+                                fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Quản lý khung giờ</span>
+                        </div>
+                        @if(!request()->routeIs('admin.delivery-slots.*'))
+                            <svg class="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" fill="none"
+                                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        @endif
                     </a>
+
+                    <!-- 7. Quản lý người dùng -->
+                    <a href="{{ route('admin.users.index') }}"
+                        class="flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group {{ request()->routeIs('admin.users.*') ? 'font-bold shadow-md' : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]' }}"
+                        style="{{ request()->routeIs('admin.users.*') ? 'background: linear-gradient(90deg, #fbcfe8 0%, #ffd7e2 100%); color: #1e1b24;' : '' }}">
+                        <div class="flex items-center gap-3">
+                            <!-- Icon Tài khoản User -->
+                            <svg class="w-4 h-4 {{ request()->routeIs('admin.users.*') ? 'text-gray-900' : 'text-gray-400 group-hover:text-white' }}"
+                                fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <span>Quản lý người dùng</span>
+                        </div>
+                        @if(!request()->routeIs('admin.users.*'))
+                            <svg class="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" fill="none"
+                                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        @endif
+                    </a>
+
                 </nav>
             </div>
 
-            <!-- Nút Đăng xuất & Bó hoa trang trí góc dưới -->
-            <div class="p-4 relative">
-                <div class="absolute right-2 bottom-12 opacity-80 pointer-events-none text-4xl select-none">
-                    🌷💐
-                </div>
+            <!-- Họa tiết hoa chìm mờ góc dưới bên trái -->
+            <div class="px-6 py-2 opacity-15 pointer-events-none">
+                <svg class="w-20 h-20 text-rose-300" fill="none" stroke="currentColor" stroke-width="1.2"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21V12m0 0a4.5 4.5 0 004.5-4.5c0-1.5-.7-2.5-1.5-3m-3 7.5a4.5 4.5 0 01-4.5-4.5c0-1.5.7-2.5 1.5-3m6 0a3 3 0 00-6 0m6 0c.5.8.5 1.8 0 2.5m-6-2.5c-.5.8-.5 1.8 0 2.5" />
+                </svg>
+            </div>
+
+            <!-- Nút Đăng xuất dạng bo viền cong viền mờ -->
+            <div class="p-5 border-t border-gray-800/80">
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit"
-                        class="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-rose-400 hover:text-rose-600 transition">
-                        <span>🚪</span> Đăng xuất
+                        class="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-full border border-gray-700/80 text-xs font-semibold text-gray-400 hover:text-white hover:border-rose-400 hover:bg-rose-500/10 transition-all duration-200">
+                        <!-- Icon Đăng xuất mũi tên ra ngoài -->
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        <span>Đăng xuất</span>
                     </button>
                 </form>
             </div>
+
         </aside>
 
         <!-- Main Content Area -->

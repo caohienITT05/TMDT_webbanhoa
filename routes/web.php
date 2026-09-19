@@ -27,6 +27,10 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+
 /*
 |--------------------------------------------------------------------------
 | GIAO DIỆN KHÁCH HÀNG (TV2)
@@ -197,9 +201,10 @@ Route::middleware('auth')->group(function () {
 
     // Trang xem đơn hàng sau khi đặt thành công
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+
     // Xem danh sách và theo dõi đơn hàng của khách hàng (UC14)
     Route::get('/don-hang-cua-toi', function () {
-        $orders = \App\Models\Order::where('user_id', auth()->id())
+        $orders = Order::where('user_id', auth()->id())
             ->with(['orderItems.product', 'deliverySlot'])
             ->latest()
             ->paginate(10);
@@ -231,10 +236,28 @@ Route::middleware('auth')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+
+    // Bảng điều khiển quản trị & Thống kê doanh thu tự động
     Route::get('/dashboard', function () {
-        $totalRevenue = Order::where('status', 'COMPLETED')->sum('total_amount');
+        // TÍNH DOANH THU TRIỆT ĐỂ:
+        // 1. Đơn thanh toán online thành công (payment_status = 'paid')
+        // 2. Đơn COD đã hoàn thành/đã giao (COMPLETED / DELIVERED)
+        // 3. Đơn đã duyệt (CONFIRMED)
+        $totalRevenue = Order::where(function ($query) {
+            $query->where('payment_status', 'paid')
+                ->orWhereIn('status', ['COMPLETED', 'completed', 'DELIVERED', 'delivered', 'CONFIRMED', 'confirmed'])
+                ->orWhereIn('order_status', ['completed', 'delivered', 'confirmed']);
+        })
+            ->sum(DB::raw('COALESCE(total_amount, total, 0)'));
+
         $totalOrders = Order::count();
-        $pendingOrders = Order::whereIn('status', ['PENDING', 'CONFIRMED', 'PREPARING'])->count();
+
+        // Đếm số đơn đang chờ xử lý & cắm hoa
+        $pendingOrders = Order::where(function ($query) {
+            $query->whereIn('status', ['PENDING', 'pending', 'PREPARING', 'preparing', 'processing'])
+                ->orWhereIn('order_status', ['pending', 'preparing', 'processing']);
+        })->count();
+
         $totalProducts = Product::count();
         $totalCustomers = User::where('role', 'customer')->count();
         $recentOrders = Order::with('user')->latest()->take(5)->get();
@@ -272,10 +295,6 @@ Route::get('/dieu-khoan-giao-dich', [PolicyController::class, 'terms'])->name('p
 Route::get('/chinh-sach-doi-tra', [PolicyController::class, 'returns'])->name('policies.returns');
 Route::get('/chinh-sach-bao-mat', [PolicyController::class, 'privacy'])->name('policies.privacy');
 
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
-
 Route::get('/fix-db', function () {
     Schema::table('delivery_slots', function (Blueprint $table) {
         if (!Schema::hasColumn('delivery_slots', 'name')) {
@@ -294,6 +313,7 @@ Route::get('/fix-db', function () {
             $table->integer('max_orders')->default(20);
         }
     });
+
     // 1. Thêm toàn bộ các cột thanh toán còn thiếu vào bảng orders
     Schema::table('orders', function (Blueprint $table) {
         if (!Schema::hasColumn('orders', 'order_code'))
