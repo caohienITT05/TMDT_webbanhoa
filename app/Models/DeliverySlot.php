@@ -9,6 +9,7 @@ class DeliverySlot extends Model
 {
     protected $fillable = [
         'name',
+        'time_range',
         'start_time',
         'end_time',
         'max_orders',
@@ -18,6 +19,12 @@ class DeliverySlot extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    // Tự động lấy time_range nếu name bị trống
+    public function getNameAttribute($value)
+    {
+        return $value ?: $this->attributes['time_range'] ?? '';
+    }
 
     public function orders(): HasMany
     {

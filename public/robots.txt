@@ -1,2 +1,17 @@
 User-agent: *
-Disallow:
+
+# Chặn bot tìm kiếm truy cập vào khu vực quản trị và thanh toán nhạy cảm
+Disallow: /admin/
+Disallow: /cart/
+Disallow: /checkout/
+Disallow: /password/
+
+# Cho phép lập chỉ mục các trang bán hàng công khai và chính sách pháp lý
+Allow: /
+Allow: /products
+Allow: /dieu-khoan-giao-dich
+Allow: /chinh-sach-doi-tra
+Allow: /chinh-sach-bao-mat
+
+# Đường dẫn đến bản đồ trang web
+Sitemap: http://127.0.0.1:8000/sitemap.xml

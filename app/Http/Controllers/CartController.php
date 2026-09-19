@@ -160,24 +160,28 @@ class CartController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'quantity' => 'required|integer|min:1',
+            'quantity' => 'required|integer|min:1|max:99',
         ]);
 
-        $cartItem = $this->getCartQuery()->findOrFail($id);
-        $quantity = (int) $request->quantity;
-        $price = (float) ($cartItem->product ? $cartItem->product->price : $cartItem->price);
+        $cartItem = CartItem::with('product')->findOrFail($id);
 
-        $cartItem->update([
-            'quantity' => $quantity,
-            'price' => $price,
-            'subtotal' => $price * $quantity,
-        ]);
+        // Lấy giá bán thực tế của sản phẩm
+        $unitPrice = (float) ($cartItem->price ?? $cartItem->product?->sale_price ?? $cartItem->product?->price ?? 0);
+        $newQuantity = (int) $request->quantity;
 
-        return redirect()
-            ->back()
-            ->with('success', 'Đã cập nhật số lượng!');
+        // Cập nhật số lượng và thành tiền
+        $cartItem->quantity = $newQuantity;
+        $cartItem->price = $unitPrice;
+
+        // Nếu bảng cart_items có cột calculated_subtotal hoặc subtotal thì cập nhật luôn
+        if (\Schema::hasColumn('cart_items', 'calculated_subtotal')) {
+            $cartItem->calculated_subtotal = $unitPrice * $newQuantity;
+        }
+
+        $cartItem->save();
+
+        return redirect()->route('cart.index')->with('success', 'Đã cập nhật số lượng bó hoa thành công!');
     }
-
     /**
      * Xóa sản phẩm khỏi giỏ.
      */

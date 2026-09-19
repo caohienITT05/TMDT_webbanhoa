@@ -2,12 +2,15 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\VoucherController as AdminVoucherController;
+use App\Http\Controllers\PolicyController;
 
 // 1. Controllers Quản trị (TV1 & TV4)
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Admin\DeliverySlotController as AdminDeliverySlotController;
 
 // 2. Controllers Giỏ hàng, Quà tặng & Voucher (TV3)
 use App\Http\Controllers\CartController;
@@ -178,26 +181,35 @@ Route::post('/shipping/save', [ShippingController::class, 'save'])->name('shippi
 
 /*
 |--------------------------------------------------------------------------
-| PHÂN HỆ THANH TOÁN & PAYPAL (TV4)
+| PHÂN HỆ THANH TOÁN & PAYPAL (TV4) - BẮT BUỘC ĐĂNG NHẬP
 |--------------------------------------------------------------------------
 */
-Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
-Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
-Route::post('/checkout/process', [CheckoutController::class, 'store'])->name('checkout.process');
-Route::get('/thanh-toan', [CheckoutController::class, 'index'])->name('checkout');
+Route::middleware('auth')->group(function () {
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::post('/checkout/process', [CheckoutController::class, 'store'])->name('checkout.process');
+    Route::get('/thanh-toan', [CheckoutController::class, 'index'])->name('checkout');
 
-// Bộ 3 route xử lý PayPal
-Route::get('/paypal/create/{order}', [CheckoutController::class, 'paypalCreate'])->name('paypal.create');
-Route::get('/paypal/success', [CheckoutController::class, 'paypalSuccess'])->name('paypal.success');
-Route::get('/paypal/cancel', [CheckoutController::class, 'paypalCancel'])->name('paypal.cancel');
+    // Route thanh toán PayPal
+    Route::get('/paypal/create/{order}', [CheckoutController::class, 'paypalCreate'])->name('paypal.create');
+    Route::get('/paypal/success', [CheckoutController::class, 'paypalSuccess'])->name('paypal.success');
+    Route::get('/paypal/cancel', [CheckoutController::class, 'paypalCancel'])->name('paypal.cancel');
+
+    // Trang xem đơn hàng sau khi đặt thành công
+    Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+});
+
 /*
 |--------------------------------------------------------------------------
 | TÀI KHOẢN & BREEZE AUTH (TV1)
 |--------------------------------------------------------------------------
 */
 Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+    if (auth()->user()->role === 'admin') {
+        return redirect()->route('admin.dashboard');
+    }
+    return redirect()->route('home');
+})->middleware(['auth'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -229,6 +241,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         ));
     })->name('dashboard');
 
+    // Quản lý khung giờ giao nhận hoa
+    Route::resource('delivery-slots', AdminDeliverySlotController::class);
+
     Route::resource('categories', AdminCategoryController::class);
     Route::resource('products', AdminProductController::class);
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
@@ -237,12 +252,40 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
     Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
     Route::patch('/users/{user}/toggle', [AdminUserController::class, 'toggleStatus'])->name('users.toggle');
+    Route::resource('vouchers', AdminVoucherController::class);
 });
+
+/*
+|--------------------------------------------------------------------------
+| TRANG CHÍNH SÁCH PHÁP LÝ TMĐT (BẮT BUỘC)
+|--------------------------------------------------------------------------
+*/
+Route::get('/dieu-khoan-giao-dich', [PolicyController::class, 'terms'])->name('policies.terms');
+Route::get('/chinh-sach-doi-tra', [PolicyController::class, 'returns'])->name('policies.returns');
+Route::get('/chinh-sach-bao-mat', [PolicyController::class, 'privacy'])->name('policies.privacy');
+
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 
 Route::get('/fix-db', function () {
+    Schema::table('delivery_slots', function (Blueprint $table) {
+        if (!Schema::hasColumn('delivery_slots', 'name')) {
+            $table->string('name')->nullable()->after('id');
+        }
+        if (!Schema::hasColumn('delivery_slots', 'is_active')) {
+            $table->boolean('is_active')->default(true);
+        }
+        if (!Schema::hasColumn('delivery_slots', 'start_time')) {
+            $table->time('start_time')->nullable();
+        }
+        if (!Schema::hasColumn('delivery_slots', 'end_time')) {
+            $table->time('end_time')->nullable();
+        }
+        if (!Schema::hasColumn('delivery_slots', 'max_orders')) {
+            $table->integer('max_orders')->default(20);
+        }
+    });
     // 1. Thêm toàn bộ các cột thanh toán còn thiếu vào bảng orders
     Schema::table('orders', function (Blueprint $table) {
         if (!Schema::hasColumn('orders', 'order_code'))
@@ -335,6 +378,7 @@ Route::get('/fix-db', function () {
         <a href='/checkout' style='display: inline-block; padding: 10px 24px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold;'>Quay lại trang Checkout để Đặt Hàng</a>
     </div>";
 });
+
 // Route xem chi tiết đơn hàng sau khi thanh toán thành công
 Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
 

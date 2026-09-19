@@ -28,12 +28,20 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        // Nếu là admin -> vào trang quản trị, nếu là khách -> vào dashboard người dùng
+        // 1. Chuyển toàn bộ sản phẩm trong giỏ hàng tạm sang tài khoản vừa đăng nhập
+        $sessionId = session()->getId();
+        \App\Models\CartItem::where('session_id', $sessionId)
+            ->whereNull('user_id')
+            ->update(['user_id' => $request->user()->id]);
+
+        // 2. Chuyển hướng đúng vai trò
         if ($request->user()->role === 'admin') {
-            return redirect()->intended(route('admin.dashboard', absolute: false));
+            return redirect()->intended(route('admin.dashboard'));
         }
 
-        return redirect()->intended(route('dashboard', absolute: false));
+
+        // Khách hàng thông thường: ưu tiên quay lại trang trước đó (ví dụ trang checkout)
+        return redirect()->intended(route('home'));
     }
 
     /**

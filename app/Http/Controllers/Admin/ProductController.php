@@ -13,24 +13,27 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::with('category')->latest();
+        $query = Product::with('category');
 
-        // Tìm kiếm theo tên sản phẩm
         if ($request->filled('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
 
-        // Lọc theo danh mục
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
         }
 
-        $products = $query->paginate(10)->withQueryString();
-        $categories = Category::all();
+        // Lọc theo mùa vụ
+        if ($request->filled('season')) {
+            $query->season($request->season);
+        }
 
+        $products = $query->latest()->paginate(10)->withQueryString();
+        $categories = \App\Models\Category::all();
+
+        // SỬA TẠI ĐÂY: Thêm "admin." vào trước "products.index"
         return view('admin.products.index', compact('products', 'categories'));
     }
-
     public function create()
     {
         $categories = Category::all();

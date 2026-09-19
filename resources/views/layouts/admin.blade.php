@@ -42,6 +42,19 @@
                         class="flex items-center gap-3 px-4 py-2.5 rounded-full transition {{ request()->routeIs('admin.orders.*') ? 'bg-[#ffe2e8] text-rose-600 font-bold shadow-sm' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-500' }}">
                         <span>🛒</span> Quản lý đơn hàng
                     </a>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"
+                            href="{{ route('admin.vouchers.index') }}">
+                            <i class="bi bi-ticket-perforated me-2"></i>
+                            <span>Quản lý Voucher & Khuyến mại</span>
+                        </a>
+                    </li>
+                    <!-- Quản lý khung giờ giao hoa -->
+                    <a href="{{ route('admin.delivery-slots.index') }}"
+                        class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition {{ request()->routeIs('admin.delivery-slots.*') ? 'bg-rose-100 text-rose-700 font-bold' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-600' }}">
+                        <span>⏰</span>
+                        <span>Quản lý khung giờ</span>
+                    </a>
                 </nav>
             </div>
 

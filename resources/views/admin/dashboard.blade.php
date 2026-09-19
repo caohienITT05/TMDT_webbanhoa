@@ -86,7 +86,30 @@
                 </div>
                 <div class="text-3xl opacity-70 select-none">💮</div>
             </div>
+            <div class="col-md-3 mb-4">
+                <div class="card border-0 shadow-sm rounded-3 bg-gradient text-white"
+                    style="background: linear-gradient(135deg, #ff758f, #ff4d6d);">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-white-50 mb-1">Mã Khuyến Mại</h6>
+                                <h4 class="mb-0 fw-bold">{{ \App\Models\Voucher::count() }}</h4>
+                            </div>
+                            <div class="fs-1 text-white-50">
+                                <i class="bi bi-ticket-perforated-fill"></i>
+                            </div>
+                        </div>
+                        <hr class="my-2 border-white opacity-25">
+                        <a href="{{ route('admin.vouchers.index') }}"
+                            class="text-white text-decoration-none small d-flex align-items-center justify-content-between">
+                            <span>Xem danh sách</span>
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
+        
 
         <!-- Bảng đơn đặt hoa mới nhất -->
         <div class="bg-white rounded-2xl border border-rose-100 shadow-sm overflow-hidden">
