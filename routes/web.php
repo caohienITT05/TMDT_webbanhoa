@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\DeliverySlotController as AdminDeliverySlotController;
+use App\Http\Controllers\Admin\CustomOrderController as AdminCustomOrderController;
 
 // 2. Controllers Giỏ hàng, Quà tặng & Voucher (TV3)
 use App\Http\Controllers\CartController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\ShippingController;
 // 3. Controllers Đặt hàng & Thanh toán PayPal (TV4)
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Customer\OrderController as CustomerOrderController;
+use App\Http\Controllers\Customer\CustomOrderController as CustomerCustomOrderController;
 
 // Models
 use App\Models\Category;
@@ -151,17 +153,13 @@ Route::any('/yeu-thich/toggle/{id?}', function ($id = null) {
 })->name('favorites.toggle');
 
 // Đặt hoa theo yêu cầu
-Route::get('/dat-hoa-theo-yeu-cau', function () {
-    return view('Customer.custom-order');
-})->name('custom.order');
+Route::get('/dat-hoa-theo-yeu-cau', [CustomerCustomOrderController::class, 'create'])->name('custom.order');
 
 Route::get('/custom-order', function () {
     return redirect()->route('custom.order');
 })->name('custom-order');
 
-Route::post('/dat-hoa-theo-yeu-cau', function () {
-    return back()->with('success', 'BloomGift đã tiếp nhận yêu cầu cắm hoa riêng của bạn!');
-})->name('custom.order.store');
+Route::post('/dat-hoa-theo-yeu-cau', [CustomerCustomOrderController::class, 'store'])->name('custom.order.store');
 
 /*
 |--------------------------------------------------------------------------
@@ -214,6 +212,9 @@ Route::middleware('auth')->group(function () {
             ->paginate(10);
         return view('Customer.orders', compact('orders'));
     })->name('customer.orders');
+
+    Route::get('/yeu-cau-cua-toi', [CustomerCustomOrderController::class, 'index'])->name('customer.custom-orders.index');
+    Route::get('/yeu-cau-cua-toi/{customOrderRequest}', [CustomerCustomOrderController::class, 'show'])->name('customer.custom-orders.show');
 });
 
 /*
@@ -287,6 +288,13 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.update-status');
+    Route::get('/custom-orders', [AdminCustomOrderController::class, 'index'])->name('custom-orders.index');
+    Route::get('/custom-orders/{customOrderRequest}', [AdminCustomOrderController::class, 'show'])->name('custom-orders.show');
+    Route::patch('/custom-orders/{customOrderRequest}/contacted', [AdminCustomOrderController::class, 'contacted'])->name('custom-orders.contacted');
+    Route::patch('/custom-orders/{customOrderRequest}/accept', [AdminCustomOrderController::class, 'accept'])->name('custom-orders.accept');
+    Route::patch('/custom-orders/{customOrderRequest}/reject', [AdminCustomOrderController::class, 'reject'])->name('custom-orders.reject');
+    Route::get('/custom-orders/{customOrderRequest}/create-order', [AdminCustomOrderController::class, 'createOrder'])->name('custom-orders.create-order');
+    Route::post('/custom-orders/{customOrderRequest}/create-order', [AdminCustomOrderController::class, 'storeOrder'])->name('custom-orders.create-order.store');
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
     Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
     Route::patch('/users/{user}/toggle', [AdminUserController::class, 'toggleStatus'])->name('users.toggle');

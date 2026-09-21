@@ -6,7 +6,7 @@
         <div
             class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-gray-100">
             <div>
-                <h2 class="text-xl font-bold text-gray-800">Quản lý Tài khoản (FR17)</h2>
+                <h2 class="text-xl font-bold text-gray-800">Quản lý Tài khoản</h2>
                 <p class="text-sm text-gray-500">Xem danh sách người dùng, khách hàng và quản lý quyền truy cập</p>
             </div>
         </div>

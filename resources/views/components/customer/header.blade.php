@@ -58,6 +58,7 @@
                         </div>
                         <a href="{{ route('profile.edit') }}" class="bloom-menu-link"><x-customer.icon name="user" class="h-4 w-4" />Tài khoản</a>
                         <a href="{{ route('customer.orders') }}" class="bloom-menu-link"><x-customer.icon name="package" class="h-4 w-4" />Đơn hàng của tôi</a>
+                        <a href="{{ route('customer.custom-orders.index') }}" class="bloom-menu-link"><x-customer.icon name="clock" class="h-4 w-4" />Yêu cầu của tôi</a>
                         @if (auth()->user()->role === 'admin')
                             <a href="{{ route('admin.dashboard') }}" class="bloom-menu-link"><x-customer.icon name="grid" class="h-4 w-4" />Quản trị</a>
                         @endif
@@ -97,6 +98,7 @@
                 <div class="grid grid-cols-2 gap-2 border-t border-bloom-line pt-3 text-sm font-medium">
                     <a href="{{ route('profile.edit') }}" class="bloom-mobile-link">Tài khoản</a>
                     <a href="{{ route('customer.orders') }}" class="bloom-mobile-link">Đơn hàng của tôi</a>
+                    <a href="{{ route('customer.custom-orders.index') }}" class="bloom-mobile-link">Yêu cầu của tôi</a>
                 </div>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf

@@ -27,7 +27,19 @@
         'canceled' => ['Đã hủy', 'danger'],
     ];
 
-    $statuses = $type === 'payment' ? $paymentStatuses : $orderStatuses;
+    $customOrderStatuses = [
+        'pending' => ['Chờ xử lý', 'warning'],
+        'contacted' => ['Đã liên hệ', 'info'],
+        'accepted' => ['Shop nhận yêu cầu', 'success'],
+        'rejected' => ['Shop từ chối', 'danger'],
+        'converted' => ['Đã tạo đơn', 'progress'],
+    ];
+
+    $statuses = match ($type) {
+        'payment' => $paymentStatuses,
+        'custom-order' => $customOrderStatuses,
+        default => $orderStatuses,
+    };
     $fallback = $key === '' ? 'Chưa cập nhật' : ucwords(str_replace(['-', '_'], ' ', $key));
     [$label, $tone] = $statuses[$key] ?? [$fallback, 'neutral'];
 @endphp

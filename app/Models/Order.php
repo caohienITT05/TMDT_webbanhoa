@@ -68,6 +68,11 @@ class Order extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function customOrderRequest(): HasOne
+    {
+        return $this->hasOne(CustomOrderRequest::class);
+    }
     // Tự động trả về order_code nếu giao diện gọi order_number
     public function getOrderNumberAttribute()
     {

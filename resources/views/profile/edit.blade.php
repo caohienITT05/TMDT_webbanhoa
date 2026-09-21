@@ -20,6 +20,7 @@
                 <nav class="bloom-account-nav mt-4 space-y-1" aria-label="Tài khoản">
                     <a href="{{ route('profile.edit') }}" class="is-active"><x-customer.icon name="user" class="h-4 w-4" />Thông tin cá nhân</a>
                     <a href="{{ route('customer.orders') }}"><x-customer.icon name="receipt" class="h-4 w-4" />Đơn hàng của tôi</a>
+                    <a href="{{ route('customer.custom-orders.index') }}"><x-customer.icon name="clock" class="h-4 w-4" />Yêu cầu của tôi</a>
                     <a href="{{ route('favorites.index') }}"><x-customer.icon name="heart" class="h-4 w-4" />Sản phẩm yêu thích</a>
                     <a href="#password"><x-customer.icon name="shield" class="h-4 w-4" />Đổi mật khẩu</a>
                 </nav>
