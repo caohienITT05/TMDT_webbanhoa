@@ -1,27 +1,16 @@
-<?php
+﻿<?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
-        if (!Schema::hasTable('delivery_slots')) {
-            Schema::create('delivery_slots', function (Blueprint $table) {
-                $table->id();
-                $table->string('name');
-                $table->time('start_time');
-                $table->time('end_time');
-                $table->unsignedInteger('max_orders')->default(10);
-                $table->boolean('is_active')->default(true);
-                $table->timestamps();
-            });
-        }
+        // delivery_slots đã được tạo bởi migration core 2026_09_07.
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('delivery_slots');
+        // Không xóa bảng delivery_slots của migration core.
     }
 };
