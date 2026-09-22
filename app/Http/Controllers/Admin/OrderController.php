@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Payment;
 use Illuminate\Http\Request;
+use App\Mail\OrderDeliveredMail;
+use Illuminate\Support\Facades\Mail;
 
 class OrderController extends Controller
 {
@@ -47,11 +49,15 @@ class OrderController extends Controller
     /**
      * Cập nhật trạng thái đơn hàng và đồng bộ doanh thu.
      */
+    /**
+     * Cập nhật trạng thái đơn hàng và gửi mail hoàn tất.
+     */
+    /**
+     * Cập nhật trạng thái đơn hàng và gửi mail khi hoàn thành.
+     */
     public function updateStatus(Request $request, Order $order)
     {
-        // Chấp nhận cả giá trị gửi lên từ trường status hoặc order_status
         $inputStatus = $request->input('status') ?? $request->input('order_status');
-
         $request->merge(['order_status' => strtolower($inputStatus)]);
 
         $validated = $request->validate([
@@ -64,23 +70,36 @@ class OrderController extends Controller
         $statusLower = strtolower($validated['order_status']);
         $statusUpper = strtoupper($statusLower);
 
-        // Chuẩn bị dữ liệu cập nhật đồng bộ cả 2 cột
         $updateData = [
             'order_status' => $statusLower,
             'status' => $statusUpper,
         ];
 
-        // Nếu chuyển sang hoàn tất/giao thành công: tự động xác nhận đã thu tiền
+        // Nếu chuyển sang hoàn tất / giao thành công
         if (in_array($statusLower, ['completed', 'delivered'])) {
             $updateData['payment_status'] = 'paid';
 
-            // Cập nhật bản ghi giao dịch trong bảng payments nếu có
             Payment::where('order_id', $order->id)->update([
                 'status' => 'completed',
                 'paid_at' => now(),
             ]);
+
+            // Tải quan hệ để nạp dữ liệu đầy đủ cho giao diện Mail
+            $order->loadMissing(['user', 'deliverySlot', 'orderItems']);
+
+            // Lấy email khách hàng
+            $customerEmail = $order->user->email ?? $order->recipient_email ?? null;
+
+            if ($customerEmail) {
+                try {
+                    Mail::to($customerEmail)->send(new OrderDeliveredMail($order));
+                } catch (\Throwable $e) {
+                    \Log::error('Lỗi gửi mail giao hàng thành công: ' . $e->getMessage());
+                }
+            }
         }
 
+        // Cập nhật trạng thái vào cơ sở dữ liệu
         $order->update($updateData);
 
         return redirect()

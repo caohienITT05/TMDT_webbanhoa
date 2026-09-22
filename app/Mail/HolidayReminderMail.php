@@ -26,7 +26,7 @@ class HolidayReminderMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '💌 Nhắc dịp lễ: ' . $this->holidayName . ' - Tặng bạn mã ưu đãi từ BloomGift!',
+            subject: '🌸 BloomGift: Sắp đến ' . $this->holidayName . ' - Nhận ngay ưu đãi tặng hoa!',
         );
     }
 

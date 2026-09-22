@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
+use App\Mail\OrderPlacedMail;
 
 class CheckoutController extends Controller
 {
@@ -282,11 +283,14 @@ class CheckoutController extends Controller
         }
 
         // Gửi email hóa đơn xác nhận đơn hàng tự động
-        try {
-            $emailTo = Auth::user()->email ?? $request->input('recipient_email') ?? 'customer@bloomgift.vn';
-            Mail::to($emailTo)->send(new OrderConfirmationMail($order));
-        } catch (\Throwable $e) {
-            \Log::error('Lỗi gửi email xác nhận đơn hàng: ' . $e->getMessage());
+        // Gửi mail xác nhận đặt hàng
+        $customerEmail = auth()->user()->email ?? $order->user->email ?? null;
+        if ($customerEmail) {
+            try {
+                Mail::to($customerEmail)->send(new OrderPlacedMail($order));
+            } catch (\Throwable $e) {
+                \Log::error('Lỗi gửi mail đặt hàng: ' . $e->getMessage());
+            }
         }
 
         // Nếu chọn COD: hoàn tất và chuyển về trang chi tiết đơn
@@ -303,6 +307,14 @@ class CheckoutController extends Controller
         }
 
         // Nếu chọn PayPal: chuyển sang hàm tạo phiên thanh toán PayPal Sandbox
+        $customerEmail = $order->user->email ?? auth()->user()->email ?? null;
+        if ($customerEmail) {
+            try {
+                Mail::to($customerEmail)->send(new OrderPlacedMail($order));
+            } catch (\Throwable $e) {
+                \Log::error('Lỗi gửi mail đặt hàng PayPal: ' . $e->getMessage());
+            }
+        }
         return redirect()->route('paypal.create', ['order' => $order->id]);
     }
 
