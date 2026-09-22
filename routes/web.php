@@ -35,6 +35,8 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 
+use App\Http\Controllers\Admin\MarketingController;
+
 /*
 |--------------------------------------------------------------------------
 | GIAO DIỆN KHÁCH HÀNG (TV2)
@@ -299,6 +301,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
     Route::patch('/users/{user}/toggle', [AdminUserController::class, 'toggleStatus'])->name('users.toggle');
     Route::resource('vouchers', AdminVoucherController::class);
+    // tạo chiến dịch qua email dịp lễ
+    // SỬA THÀNH NHƯ THẾ NÀY:
+    Route::get('/marketing/holiday', [MarketingController::class, 'index'])->name('marketing.holiday');
+    Route::post('/marketing/holiday', [MarketingController::class, 'sendHolidayEmail'])->name('marketing.holiday.send');
 });
 
 /*

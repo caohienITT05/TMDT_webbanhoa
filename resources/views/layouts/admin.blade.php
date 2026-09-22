@@ -15,8 +15,10 @@
         <!-- ========================================================
      SIDEBAR ADMIN - THEME ĐEN SANG TRỌNG & ICON VECTOR VECTOR
      ======================================================== -->
-        <div x-cloak x-show="menuOpen" x-transition.opacity @click="menuOpen = false" class="fixed inset-0 z-30 bg-slate-950/45 lg:hidden"></div>
-        <aside :class="{ 'translate-x-0': menuOpen }" class="fixed inset-y-0 left-0 z-40 flex min-h-screen w-64 shrink-0 -translate-x-full flex-col justify-between shadow-2xl transition-transform duration-200 lg:sticky lg:top-0 lg:translate-x-0 select-none"
+        <div x-cloak x-show="menuOpen" x-transition.opacity @click="menuOpen = false"
+            class="fixed inset-0 z-30 bg-slate-950/45 lg:hidden"></div>
+        <aside :class="{ 'translate-x-0': menuOpen }"
+            class="fixed inset-y-0 left-0 z-40 flex min-h-screen w-64 shrink-0 -translate-x-full flex-col justify-between shadow-2xl transition-transform duration-200 lg:sticky lg:top-0 lg:translate-x-0 select-none"
             style="background: #14151f; color: #94a3b8; font-family: system-ui, -apple-system, sans-serif;">
 
             <div class="p-5">
@@ -107,15 +109,21 @@
                         class="flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group {{ request()->routeIs('admin.custom-orders.*') ? 'font-bold shadow-md' : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]' }}"
                         style="{{ request()->routeIs('admin.custom-orders.*') ? 'background: linear-gradient(90deg, #fbcfe8 0%, #ffd7e2 100%); color: #1e1b24;' : '' }}">
                         <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4 {{ request()->routeIs('admin.custom-orders.*') ? 'text-gray-900' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 3h8l3 3v15H6V4a1 1 0 0 1 1-1Zm2 7h6m-6 4h6m-6 4h4" />
+                            <svg class="w-4 h-4 {{ request()->routeIs('admin.custom-orders.*') ? 'text-gray-900' : 'text-gray-400 group-hover:text-white' }}"
+                                fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M7 3h8l3 3v15H6V4a1 1 0 0 1 1-1Zm2 7h6m-6 4h6m-6 4h4" />
                             </svg>
                             <span>Yêu cầu đặt hoa</span>
                         </div>
                         @if ($customOrderUnreadCount > 0)
-                            <span class="min-w-5 rounded-full bg-rose-500 px-1.5 py-0.5 text-center text-[10px] font-bold text-white">{{ $customOrderUnreadCount > 99 ? '99+' : $customOrderUnreadCount }}</span>
+                            <span
+                                class="min-w-5 rounded-full bg-rose-500 px-1.5 py-0.5 text-center text-[10px] font-bold text-white">{{ $customOrderUnreadCount > 99 ? '99+' : $customOrderUnreadCount }}</span>
                         @elseif(!request()->routeIs('admin.custom-orders.*'))
-                            <svg class="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                            <svg class="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" fill="none"
+                                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
                         @endif
                     </a>
 
@@ -202,6 +210,25 @@
                             </svg>
                         @endif
                     </a>
+                    <!-- 9. Gửi Mail Marketing Dịp Lễ -->
+                    <a href="{{ route('admin.marketing.holiday') }}"
+                        class="flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group {{ request()->routeIs('admin.marketing.*') ? 'font-bold shadow-md' : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]' }}"
+                        style="{{ request()->routeIs('admin.marketing.*') ? 'background: linear-gradient(90deg, #fbcfe8 0%, #ffd7e2 100%); color: #1e1b24;' : '' }}">
+                        <div class="flex items-center gap-3">
+                            <svg class="w-4 h-4 {{ request()->routeIs('admin.marketing.*') ? 'text-gray-900' : 'text-gray-400 group-hover:text-white' }}"
+                                fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                            </svg>
+                            <span>Gửi Mail Dịp Lễ</span>
+                        </div>
+                        @if(!request()->routeIs('admin.marketing.*'))
+                            <svg class="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" fill="none"
+                                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        @endif
+                    </a>
 
                 </nav>
             </div>
@@ -239,34 +266,70 @@
             <header
                 class="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-rose-100 bg-white/80 px-4 shadow-sm backdrop-blur sm:px-8">
                 <div class="flex items-center gap-4">
-                    <button type="button" @click="menuOpen = true" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-rose-500 transition hover:bg-rose-50 hover:text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-200 lg:hidden" aria-label="Mở menu quản trị">
-                        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 5.5h13M3.5 10h13M3.5 14.5h13" stroke-linecap="round" /></svg>
+                    <button type="button" @click="menuOpen = true"
+                        class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-rose-500 transition hover:bg-rose-50 hover:text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-200 lg:hidden"
+                        aria-label="Mở menu quản trị">
+                        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                            stroke-width="1.8">
+                            <path d="M3.5 5.5h13M3.5 10h13M3.5 14.5h13" stroke-linecap="round" />
+                        </svg>
                     </button>
                     <span
                         class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-500 text-xs font-medium border border-rose-100">
-                        <svg aria-hidden="true" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 16.5V10m0 0C6.2 10 5.5 7.3 6.5 5.2 8.8 5.4 10 7.1 10 10Zm0 0c3.8 0 4.5-2.7 3.5-4.8C11.2 5.4 10 7.1 10 10Zm0 0c-1.2 0-2.8 1.4-2.8 3.3 1.9.3 3.1-.7 2.8-3.3Zm0 0c1.2 0 2.8 1.4 2.8 3.3-1.9.3-3.1-.7-2.8-3.3Z" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                        <svg aria-hidden="true" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none"
+                            stroke="currentColor" stroke-width="1.7">
+                            <path
+                                d="M10 16.5V10m0 0C6.2 10 5.5 7.3 6.5 5.2 8.8 5.4 10 7.1 10 10Zm0 0c3.8 0 4.5-2.7 3.5-4.8C11.2 5.4 10 7.1 10 10Zm0 0c-1.2 0-2.8 1.4-2.8 3.3 1.9.3 3.1-.7 2.8-3.3Zm0 0c1.2 0 2.8 1.4 2.8 3.3-1.9.3-3.1-.7-2.8-3.3Z"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
                         <span class="hidden sm:inline">Chào mừng bạn đến với BloomGift Admin</span>
                         <span class="sm:hidden">BloomGift Admin</span>
                     </span>
                 </div>
                 <div class="flex items-center gap-4 text-xs">
                     <div x-data="{ notificationsOpen: false }" class="relative">
-                        <button type="button" @click="notificationsOpen = ! notificationsOpen" @click.outside="notificationsOpen = false" class="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-rose-50 hover:text-rose-500" :aria-expanded="notificationsOpen.toString()" aria-label="Thông báo yêu cầu đặt hoa">
-                            <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14.5 8.3a4.5 4.5 0 0 0-9 0c0 5-2 5.4-2 6.2h13c0-.8-2-1.2-2-6.2ZM8 16.5h4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                        <button type="button" @click="notificationsOpen = ! notificationsOpen"
+                            @click.outside="notificationsOpen = false"
+                            class="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-rose-50 hover:text-rose-500"
+                            :aria-expanded="notificationsOpen.toString()" aria-label="Thông báo yêu cầu đặt hoa">
+                            <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none"
+                                stroke="currentColor" stroke-width="1.7">
+                                <path d="M14.5 8.3a4.5 4.5 0 0 0-9 0c0 5-2 5.4-2 6.2h13c0-.8-2-1.2-2-6.2ZM8 16.5h4"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
                             @if ($customOrderUnreadCount > 0)
-                                <span class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">{{ $customOrderUnreadCount > 99 ? '99+' : $customOrderUnreadCount }}</span>
+                                <span
+                                    class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">{{ $customOrderUnreadCount > 99 ? '99+' : $customOrderUnreadCount }}</span>
                             @endif
                         </button>
-                        <div x-cloak x-show="notificationsOpen" x-transition.origin.top.right class="absolute right-0 top-[calc(100%+0.6rem)] z-30 w-80 overflow-hidden rounded-xl border border-rose-100 bg-white shadow-xl">
-                            <div class="border-b border-rose-50 px-4 py-3"><p class="text-sm font-bold text-gray-900">Yêu cầu đặt hoa mới</p><p class="mt-0.5 text-xs text-gray-500">{{ $customOrderUnreadCount ? $customOrderUnreadCount . ' yêu cầu chưa xem' : 'Không có yêu cầu chưa xem' }}</p></div>
+                        <div x-cloak x-show="notificationsOpen" x-transition.origin.top.right
+                            class="absolute right-0 top-[calc(100%+0.6rem)] z-30 w-80 overflow-hidden rounded-xl border border-rose-100 bg-white shadow-xl">
+                            <div class="border-b border-rose-50 px-4 py-3">
+                                <p class="text-sm font-bold text-gray-900">Yêu cầu đặt hoa mới</p>
+                                <p class="mt-0.5 text-xs text-gray-500">
+                                    {{ $customOrderUnreadCount ? $customOrderUnreadCount . ' yêu cầu chưa xem' : 'Không có yêu cầu chưa xem' }}
+                                </p>
+                            </div>
                             <div class="max-h-80 overflow-y-auto">
                                 @forelse ($customOrderNotifications as $notification)
-                                    <a href="{{ route('admin.custom-orders.show', $notification) }}" class="block border-b border-rose-50 px-4 py-3 transition hover:bg-rose-50/60"><p class="text-sm font-semibold text-gray-900">{{ $notification->customer_name }}</p><p class="mt-0.5 text-xs text-gray-500">{{ $notification->phone }} · {{ $notification->occasion ?: 'Yêu cầu đặt hoa' }}</p><p class="mt-1 text-[11px] text-gray-400">{{ $notification->created_at->format('d/m H:i') }}</p></a>
+                                    <a href="{{ route('admin.custom-orders.show', $notification) }}"
+                                        class="block border-b border-rose-50 px-4 py-3 transition hover:bg-rose-50/60">
+                                        <p class="text-sm font-semibold text-gray-900">{{ $notification->customer_name }}
+                                        </p>
+                                        <p class="mt-0.5 text-xs text-gray-500">{{ $notification->phone }} ·
+                                            {{ $notification->occasion ?: 'Yêu cầu đặt hoa' }}
+                                        </p>
+                                        <p class="mt-1 text-[11px] text-gray-400">
+                                            {{ $notification->created_at->format('d/m H:i') }}
+                                        </p>
+                                    </a>
                                 @empty
                                     <p class="px-4 py-6 text-center text-xs text-gray-500">Bạn đã xem tất cả yêu cầu.</p>
                                 @endforelse
                             </div>
-                            <a href="{{ route('admin.custom-orders.index') }}" class="block bg-rose-50 px-4 py-3 text-center text-xs font-bold text-rose-700 transition hover:bg-rose-100">Xem tất cả yêu cầu</a>
+                            <a href="{{ route('admin.custom-orders.index') }}"
+                                class="block bg-rose-50 px-4 py-3 text-center text-xs font-bold text-rose-700 transition hover:bg-rose-100">Xem
+                                tất cả yêu cầu</a>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
