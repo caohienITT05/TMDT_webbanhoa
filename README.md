@@ -1,52 +1,50 @@
-# 🌸 BloomGift – Hoa Tươi & Hoa dịp lễ
+# 🌸 BloomGift – Website bán hoa và quà tặng trực tuyến
 
-> **Website thương mại điện tử B2C chuyên cung cấp hoa tươi và hoa theo dịp lễ.**
+> **Website thương mại điện tử B2C hỗ trợ khách hàng tìm kiếm, lựa chọn, đặt mua hoa tươi và quà tặng cho các dịp đặc biệt.**
 
-BloomGift là một website thương mại điện tử được xây dựng nhằm hỗ trợ khách hàng **tìm kiếm, lựa chọn và đặt mua hoa tươi và quà tặng trực tuyến** cho các dịp đặc biệt như sinh nhật, Valentine, 8/3, 20/10, lễ tốt nghiệp, kỷ niệm, khai trương,...
-
-Hệ thống được phát triển theo kiến trúc **MVC của Laravel**, sử dụng **MySQL** để quản lý dữ liệu và tích hợp **PayPal Sandbox** để mô phỏng thanh toán trực tuyến.
+BloomGift được xây dựng theo kiến trúc **MVC của Laravel**, sử dụng **MySQL** để quản lý dữ liệu và tích hợp **PayPal Sandbox** để mô phỏng thanh toán trực tuyến. Hệ thống hỗ trợ cả **Customer** và **Administrator**, từ quá trình xem sản phẩm, giỏ hàng, checkout, thanh toán cho đến quản lý đơn hàng.
 
 ---
 
 ## 📌 Mục lục
 
-* [Giới thiệu](#-giới-thiệu)
-* [Mục tiêu](#-mục-tiêu)
-* [Tính năng](#-tính-năng)
-* [Đối tượng sử dụng](#-đối-tượng-sử-dụng)
-* [Quy trình đặt hàng](#-quy-trình-đặt-hàng)
-* [Trạng thái đơn hàng](#-trạng-thái-đơn-hàng)
-* [Công nghệ sử dụng](#-công-nghệ-sử-dụng)
-* [Kiến trúc hệ thống](#-kiến-trúc-hệ-thống)
-* [Cơ sở dữ liệu](#-cơ-sở-dữ-liệu)
-* [Cài đặt](#-cài-đặt)
-* [Cấu hình](#-cấu-hình)
-* [Phạm vi dự án](#-phạm-vi-dự-án)
-* [Thành viên](#-thành-viên)
-* [Kế hoạch phát triển](#-kế-hoạch-phát-triển)
-* [Tài liệu tham khảo](#-tài-liệu-tham-khảo)
+- [Giới thiệu](#-giới-thiệu)
+- [Mục tiêu](#-mục-tiêu)
+- [Tính năng](#-tính-năng)
+- [Quy trình đặt hàng](#️-quy-trình-đặt-hàng)
+- [Trạng thái đơn hàng](#-trạng-thái-đơn-hàng)
+- [Công nghệ sử dụng](#️-công-nghệ-sử-dụng)
+- [Kiến trúc hệ thống](#️-kiến-trúc-hệ-thống)
+- [Cơ sở dữ liệu](#️-cơ-sở-dữ-liệu)
+- [Cài đặt](#-cài-đặt)
+- [Cấu hình PayPal Sandbox](#-cấu-hình-paypal-sandbox)
+- [Bảo mật](#-bảo-mật)
+- [Phạm vi dự án](#-phạm-vi-dự-án)
+- [Thành viên](#-thành-viên)
+- [Kế hoạch phát triển](#-kế-hoạch-phát-triển)
+- [Tài liệu tham khảo](#-tài-liệu-tham-khảo)
 
 ---
 
 ## 🌷 Giới thiệu
 
-BloomGift được xây dựng với mục tiêu tạo ra một nền tảng mua sắm hoa và quà tặng trực tuyến **đơn giản, thuận tiện và dễ sử dụng**.
+BloomGift là website thương mại điện tử được xây dựng nhằm hỗ trợ khách hàng **tìm kiếm, lựa chọn và đặt mua hoa tươi, quà tặng trực tuyến** cho các dịp như sinh nhật, Valentine, 8/3, 20/10, lễ tốt nghiệp, kỷ niệm, khai trương,...
 
 Khách hàng có thể:
 
-* 🔎 Tìm kiếm và lọc sản phẩm
-* 🌹 Xem thông tin chi tiết sản phẩm
-* 🛒 Thêm sản phẩm vào giỏ hàng
-* ❤️ Quản lý danh sách yêu thích
-* 📅 Lựa chọn ngày và khung giờ giao hàng
-* 🎁 Lựa chọn gói quà
-* 💌 Thêm thiệp và lời chúc
-* 🏷️ Sử dụng voucher
-* 💳 Thanh toán COD hoặc PayPal Sandbox
-* 📦 Theo dõi trạng thái đơn hàng
-* ⭐ Đánh giá sản phẩm
+- 🔎 Tìm kiếm và lọc sản phẩm
+- 🌹 Xem thông tin chi tiết sản phẩm
+- 🛒 Thêm sản phẩm vào giỏ hàng
+- ❤️ Quản lý danh sách yêu thích
+- 📅 Lựa chọn ngày và khung giờ giao hàng
+- 🎁 Lựa chọn gói quà
+- 💌 Thêm thiệp và lời chúc
+- 🏷️ Sử dụng voucher
+- 💳 Thanh toán COD hoặc PayPal Sandbox
+- 📦 Theo dõi trạng thái đơn hàng
+- ⭐ Đánh giá sản phẩm
 
-Phía quản trị viên có thể quản lý sản phẩm, danh mục, khách hàng, đơn hàng, voucher và các dịch vụ đi kèm.
+Phía quản trị viên có thể quản lý sản phẩm, danh mục, khách hàng, đơn hàng, voucher, thiệp, gói quà, khung giờ giao hàng và các chức năng quản trị liên quan.
 
 ---
 
@@ -58,21 +56,19 @@ Xây dựng một website thương mại điện tử hỗ trợ hoạt động 
 
 ### Mục tiêu cụ thể
 
-* Xây dựng giao diện website bán hoa và quà tặng.
-* Xây dựng hệ thống đăng ký và đăng nhập.
-* Tìm kiếm và lọc sản phẩm.
-* Quản lý giỏ hàng.
-* Đặt hàng trực tuyến.
-* Lựa chọn lịch giao hàng.
-* Thêm thiệp và lời chúc.
-* Lựa chọn dịch vụ gói quà.
-* Áp dụng voucher.
-* Thanh toán COD và PayPal Sandbox.
-* Theo dõi trạng thái đơn hàng.
-* Đánh giá sản phẩm.
-* Quản trị sản phẩm và đơn hàng.
-* Quản lý khách hàng, voucher và dịch vụ.
-* Báo cáo và thống kê cơ bản.
+- Xây dựng giao diện website bán hoa và quà tặng.
+- Xây dựng hệ thống đăng ký, đăng nhập và phân quyền.
+- Tìm kiếm và lọc sản phẩm.
+- Quản lý giỏ hàng.
+- Đặt hàng trực tuyến.
+- Lựa chọn ngày và khung giờ giao hàng.
+- Thêm thiệp, lời chúc và gói quà.
+- Áp dụng voucher.
+- Thanh toán COD và PayPal Sandbox.
+- Theo dõi trạng thái đơn hàng.
+- Đánh giá sản phẩm.
+- Quản trị sản phẩm, danh mục, khách hàng và đơn hàng.
+- Hỗ trợ báo cáo và thống kê cơ bản.
 
 ---
 
@@ -80,61 +76,57 @@ Xây dựng một website thương mại điện tử hỗ trợ hoạt động 
 
 ### 👤 Customer
 
-| Tính năng              | Mô tả                         |
-| ---------------------- | ----------------------------- |
-| 🔐 Đăng ký / Đăng nhập | Tạo và quản lý tài khoản      |
-| 🔎 Tìm kiếm            | Tìm sản phẩm theo từ khóa     |
-| 🏷️ Lọc sản phẩm       | Lọc theo danh mục và nhu cầu  |
-| 🌹 Chi tiết sản phẩm   | Xem thông tin và hình ảnh     |
-| 🛒 Giỏ hàng            | Thêm, sửa, xóa sản phẩm       |
-| ❤️ Wishlist            | Lưu sản phẩm yêu thích        |
-| 📦 Đặt hàng            | Tạo đơn hàng trực tuyến       |
-| 📅 Lịch giao hàng      | Chọn ngày và khung giờ        |
-| 🎁 Gói quà             | Lựa chọn dịch vụ gói quà      |
-| 💌 Thiệp               | Thêm thiệp và lời chúc        |
-| 🏷️ Voucher            | Áp dụng mã giảm giá           |
-| 💳 Thanh toán          | COD / PayPal Sandbox          |
-| 📍 Theo dõi đơn        | Theo dõi tiến trình giao hàng |
-| ⭐ Đánh giá             | Đánh giá sản phẩm đã mua      |
-
-Các chức năng khách hàng được xây dựng dựa trên phạm vi chức năng đã xác định trong tài liệu phân tích của dự án.
-
----
+| Tính năng | Mô tả |
+|---|---|
+| 🔐 Đăng ký / Đăng nhập | Tạo tài khoản và truy cập hệ thống |
+| 🔎 Tìm kiếm | Tìm sản phẩm theo từ khóa |
+| 🏷️ Lọc sản phẩm | Lọc theo danh mục và nhu cầu |
+| 🌹 Chi tiết sản phẩm | Xem thông tin và hình ảnh sản phẩm |
+| 🛒 Giỏ hàng | Thêm, cập nhật số lượng và xóa sản phẩm |
+| ❤️ Wishlist | Lưu sản phẩm yêu thích |
+| 📦 Đặt hàng | Tạo đơn hàng trực tuyến |
+| 📅 Lịch giao hàng | Chọn ngày và khung giờ giao |
+| 🎁 Gói quà | Chọn dịch vụ gói quà |
+| 💌 Thiệp | Thêm thiệp và lời chúc |
+| 🏷️ Voucher | Áp dụng mã giảm giá |
+| 💳 Thanh toán | COD / PayPal Sandbox |
+| 📍 Theo dõi đơn | Theo dõi trạng thái đơn hàng |
+| ⭐ Đánh giá | Đánh giá sản phẩm đã mua |
 
 ### 👨‍💼 Administrator
 
 Admin có thể:
 
-* 📦 Quản lý sản phẩm
-* 📂 Quản lý danh mục
-* 👥 Quản lý khách hàng
-* 🧾 Quản lý đơn hàng
-* 🏷️ Quản lý voucher
-* 💌 Quản lý thiệp
-* 🎁 Quản lý gói quà
-* 🕐 Quản lý khung giờ giao hàng
-* 📊 Xem báo cáo và thống kê
+- 📦 Quản lý sản phẩm
+- 📂 Quản lý danh mục
+- 👥 Quản lý khách hàng
+- 🧾 Quản lý đơn hàng
+- 🏷️ Quản lý voucher
+- 💌 Quản lý thiệp
+- 🎁 Quản lý gói quà
+- 🕐 Quản lý khung giờ giao hàng
+- 📊 Xem báo cáo và thống kê
 
 ---
 
 ## 🛍️ Quy trình đặt hàng
-
-Quy trình mua hàng chính:
 
 ```text
 Đăng nhập
     ↓
 Chọn sản phẩm
     ↓
+Xem chi tiết sản phẩm
+    ↓
 Thêm vào giỏ hàng
     ↓
-Kiểm tra tồn kho
+Kiểm tra giỏ hàng / tồn kho
     ↓
-Nhập thông tin nhận hàng
+Checkout
     ↓
-Chọn ngày giao
+Nhập thông tin người nhận
     ↓
-Chọn khung giờ giao
+Chọn ngày và khung giờ giao hàng
     ↓
 Voucher / Thiệp / Gói quà
     ↓
@@ -144,16 +136,18 @@ Xác nhận đơn hàng
     ↓
 Tạo đơn hàng
     ↓
-Theo dõi trạng thái đơn
+COD hoặc PayPal Sandbox
+    ↓
+Theo dõi trạng thái đơn hàng
 ```
 
-Nếu khách hàng chọn PayPal, hệ thống thực hiện thêm bước thanh toán và xác nhận giao dịch thông qua **PayPal Sandbox**.
+Nếu khách hàng chọn **PayPal**, hệ thống chuyển sang PayPal Sandbox để mô phỏng thanh toán, sau đó quay lại hệ thống để cập nhật giao dịch và đơn hàng.
 
 ---
 
 ## 📦 Trạng thái đơn hàng
 
-BloomGift sử dụng các trạng thái:
+Luồng trạng thái chính:
 
 ```text
 PENDING
@@ -175,14 +169,14 @@ PENDING
 CANCELLED
 ```
 
-| Trạng thái  | Ý nghĩa       |
-| ----------- | ------------- |
-| `PENDING`   | Chờ xác nhận  |
-| `CONFIRMED` | Đã xác nhận   |
+| Trạng thái | Ý nghĩa |
+|---|---|
+| `PENDING` | Chờ xác nhận |
+| `CONFIRMED` | Đã xác nhận |
 | `PREPARING` | Đang chuẩn bị |
-| `SHIPPING`  | Đang giao     |
-| `COMPLETED` | Hoàn thành    |
-| `CANCELLED` | Đã hủy        |
+| `SHIPPING` | Đang giao |
+| `COMPLETED` | Hoàn thành |
+| `CANCELLED` | Đã hủy |
 
 ---
 
@@ -190,103 +184,104 @@ CANCELLED
 
 ### Backend
 
-* **PHP**
-* **Laravel**
-* Laravel MVC
+- **PHP**
+- **Laravel**
+- **Laravel MVC**
+- **Blade Template**
 
 Laravel đảm nhiệm:
 
-* Routing
-* Authentication
-* Business Logic
-* Controller
-* Model
-* Database Interaction
+- Routing
+- Authentication
+- Authorization
+- Business Logic
+- Controller
+- Model
+- Database Interaction
 
 ### Database
 
-* **MySQL**
+- **MySQL**
 
-Dữ liệu được sử dụng để quản lý:
+Dữ liệu chính gồm:
 
-* Users
-* Products
-* Categories
-* Carts
-* Orders
-* Payments
-* Vouchers
-* Reviews
+- Users
+- Products
+- Categories
+- Cart Items
+- Orders
+- Order Items
+- Payments
+- Vouchers
+- Reviews
+- Wishlists
+- Delivery Slots
+- Gift Cards
+- Gift Wraps
 
 ### Frontend
 
-* HTML5
-* CSS3
-* JavaScript
-* Bootstrap hoặc Tailwind CSS
+- HTML5
+- CSS3
+- JavaScript
+- Blade
+- Tailwind CSS
+- Vite
 
 ### Payment
 
-* **PayPal Sandbox**
-
-PayPal Sandbox được sử dụng để mô phỏng thanh toán trực tuyến trong quá trình phát triển và kiểm thử.
+- **COD**
+- **PayPal Sandbox**
 
 ### Development Tools
 
-* Visual Studio Code
-* XAMPP
-* Git
-* GitHub
-* MySQL
+- Visual Studio Code
+- Git
+- GitHub
+- Composer
+- npm
+- MySQL
+- Docker / Docker Compose
 
 ---
 
 ## 🏗️ Kiến trúc hệ thống
 
-BloomGift được thiết kế theo kiến trúc **MVC của Laravel**.
+BloomGift được thiết kế theo mô hình **MVC của Laravel**.
 
 ```text
-┌─────────────────────┐
-│       Customer      │
-│   / Administrator   │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│      Frontend       │
-│ HTML / CSS / JS     │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│       Laravel       │
-│        MVC          │
-│                     │
-│ Route / Controller  │
-│ Model / Business    │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│        MySQL        │
-│      Database       │
-└─────────────────────┘
-
-           │
-           │ Payment
-           ▼
-┌─────────────────────┐
-│   PayPal Sandbox    │
-└─────────────────────┘
+┌─────────────────────────┐
+│ Customer / Administrator│
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│        Frontend         │
+│ Blade / HTML / CSS / JS │
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│         Laravel         │
+│           MVC           │
+│ Route / Controller      │
+│ Model / Business Logic  │
+└───────┬───────────┬─────┘
+        │           │
+        ▼           ▼
+┌──────────────┐  ┌───────────────┐
+│    MySQL     │  │ PayPal Sandbox│
+│   Database   │  │    Payment    │
+└──────────────┘  └───────────────┘
 ```
 
-Luồng xử lý chính của hệ thống:
+Luồng xử lý chính:
 
 **User → Frontend → Laravel → MySQL**
 
-Đối với thanh toán PayPal:
+Với PayPal:
 
-**Laravel → PayPal Sandbox → Laravel → Payment/Order**.
+**Laravel → PayPal Sandbox → Laravel → Payment / Order**
 
 ---
 
@@ -295,9 +290,9 @@ Luồng xử lý chính của hệ thống:
 Các thực thể chính của hệ thống:
 
 ```text
+USER
 CATEGORY
 PRODUCT
-CART
 CART_ITEM
 ORDER
 ORDER_ITEM
@@ -312,12 +307,13 @@ GIFT_WRAP
 
 Một số quan hệ chính:
 
-* Một `Category` có nhiều `Product`.
-* Một `User` có thể tạo nhiều `Order`.
-* Một `Order` bao gồm nhiều `OrderItem`.
-* Một `Order` có thông tin `Payment`.
-* `Product` liên kết với `CartItem`, `OrderItem`, `Review` và `Wishlist`.
-* `Voucher` và `DeliverySlot` được liên kết với `Order`.
+- Một `Category` có nhiều `Product`.
+- Một `User` có thể tạo nhiều `Order`.
+- Một `Order` có nhiều `OrderItem`.
+- Một `Order` có thông tin `Payment`.
+- `Product` có thể liên kết với `CartItem`, `OrderItem`, `Review` và `Wishlist`.
+- `DeliverySlot` được sử dụng khi khách hàng lựa chọn thời gian giao hàng.
+- Voucher, thiệp và gói quà được sử dụng trong quá trình checkout theo chức năng của hệ thống.
 
 ---
 
@@ -326,40 +322,45 @@ Một số quan hệ chính:
 ### 1. Clone repository
 
 ```bash
-git clone https://github.com/USERNAME/BloomGift.git
-
-cd BloomGift
+git clone https://github.com/chien23010209/DO-AN-CO-SO-CNTT.git
+cd DO-AN-CO-SO-CNTT
 ```
 
-> Thay `USERNAME/BloomGift` bằng đường dẫn repository thực tế của bạn.
-
-### 2. Cài đặt dependencies
+### 2. Cài đặt thư viện PHP
 
 ```bash
 composer install
 ```
 
-### 3. Tạo file `.env`
+### 3. Cài đặt thư viện frontend
+
+```bash
+npm install
+```
+
+### 4. Tạo file `.env`
+
+Linux / macOS:
 
 ```bash
 cp .env.example .env
 ```
 
-Trên Windows có thể tạo bản sao `.env.example` và đổi tên thành:
+Windows PowerShell:
 
-```text
-.env
+```powershell
+Copy-Item .env.example .env
 ```
 
-### 4. Tạo Application Key
+### 5. Tạo Application Key
 
 ```bash
 php artisan key:generate
 ```
 
-### 5. Cấu hình Database
+### 6. Cấu hình MySQL
 
-Mở file `.env` và cấu hình MySQL:
+Mở file `.env` và cấu hình:
 
 ```env
 DB_CONNECTION=mysql
@@ -370,19 +371,29 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-Tạo database:
+Tạo database nếu chưa có:
 
 ```sql
-CREATE DATABASE bloomgift;
+CREATE DATABASE bloomgift
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
 ```
 
-### 6. Chạy Migration
+Sau khi thay đổi `.env`, chạy:
+
+```bash
+php artisan optimize:clear
+```
+
+### 7. Chạy Migration
+
+Đối với **database mới**:
 
 ```bash
 php artisan migrate
 ```
 
-Nếu project có Seeder:
+Nếu project có dữ liệu mẫu:
 
 ```bash
 php artisan db:seed
@@ -394,13 +405,29 @@ Hoặc:
 php artisan migrate --seed
 ```
 
-### 7. Chạy Laravel
+> ⚠️ **Không sử dụng `php artisan migrate:fresh` trên database đang chứa dữ liệu chung hoặc dữ liệu cần giữ**, vì lệnh này sẽ xóa toàn bộ bảng trước khi tạo lại.
+
+### 8. Build frontend
+
+Chế độ phát triển:
+
+```bash
+npm run dev
+```
+
+Hoặc build production:
+
+```bash
+npm run build
+```
+
+### 9. Chạy Laravel
 
 ```bash
 php artisan serve
 ```
 
-Sau đó truy cập:
+Truy cập:
 
 ```text
 http://127.0.0.1:8000
@@ -412,30 +439,29 @@ http://127.0.0.1:8000
 
 BloomGift sử dụng **PayPal Sandbox** để mô phỏng giao dịch thanh toán trong môi trường phát triển.
 
-Các thông tin cấu hình PayPal nên được đặt trong `.env`:
+Cấu hình trong `.env`:
 
 ```env
+PAYPAL_MODE=sandbox
 PAYPAL_CLIENT_ID=your_client_id
 PAYPAL_CLIENT_SECRET=your_client_secret
-PAYPAL_MODE=sandbox
 ```
 
-> **Lưu ý:** Không commit `Client Secret`, API key hoặc các thông tin bảo mật lên GitHub.
+> 🔐 Không commit `Client Secret`, API key, mật khẩu database hoặc các thông tin bảo mật khác lên GitHub.
 
 ---
 
 ## 🔒 Bảo mật
 
-Hệ thống định hướng đáp ứng một số yêu cầu bảo mật cơ bản:
+Hệ thống hướng tới các yêu cầu bảo mật cơ bản:
 
-* Mật khẩu được mã hóa khi lưu trữ.
-* Phân quyền giữa `Customer` và `Administrator`.
-* Customer không được truy cập khu vực Admin.
-* Kiểm tra quyền đối với các chức năng quản trị.
-* Đảm bảo tính toàn vẹn dữ liệu đơn hàng.
-* Không lưu thông tin bí mật trực tiếp trong source code.
-
-Các yêu cầu phi chức năng và quy tắc phân quyền được xác định trong tài liệu phân tích của dự án.
+- Mật khẩu được mã hóa khi lưu trữ.
+- Phân quyền giữa `Customer` và `Administrator`.
+- Customer không được phép truy cập khu vực quản trị.
+- Các chức năng quản trị phải kiểm tra quyền truy cập.
+- Dữ liệu đơn hàng và thanh toán phải được kiểm tra trước khi cập nhật.
+- Không lưu thông tin bí mật trực tiếp trong source code.
+- File `.env` không được commit lên repository công khai.
 
 ---
 
@@ -443,61 +469,62 @@ Các yêu cầu phi chức năng và quy tắc phân quyền được xác đị
 
 Website được định hướng tương thích với:
 
-* 💻 Desktop
-* 💻 Laptop
-* 📱 Tablet
-* 📱 Mobile
+- 💻 Desktop
+- 💻 Laptop
+- 📱 Tablet
+- 📱 Mobile
 
-Giao diện ưu tiên sự đơn giản, dễ sử dụng và hỗ trợ SEO.
+Giao diện hướng tới sự đơn giản, dễ sử dụng và phù hợp với website thương mại điện tử.
 
 ---
 
 ## 📋 Phạm vi dự án
 
-### Đã triển khai / định hướng triển khai
+### Chức năng thuộc phạm vi
 
-* Website thương mại điện tử B2C.
-* Quản lý tài khoản.
-* Quản lý sản phẩm.
-* Giỏ hàng.
-* Wishlist.
-* Checkout.
-* Đơn hàng.
-* Voucher.
-* Thiệp và lời chúc.
-* Gói quà.
-* Lịch giao hàng.
-* Theo dõi đơn hàng.
-* Đánh giá sản phẩm.
-* Admin.
-* COD.
-* PayPal Sandbox.
+- Website thương mại điện tử B2C
+- Quản lý tài khoản
+- Quản lý sản phẩm
+- Quản lý danh mục
+- Giỏ hàng
+- Wishlist
+- Checkout
+- Đơn hàng
+- Voucher
+- Thiệp và lời chúc
+- Gói quà
+- Lịch giao hàng
+- Theo dõi đơn hàng
+- Đánh giá sản phẩm
+- Khu vực quản trị
+- COD
+- PayPal Sandbox
 
 ### Ngoài phạm vi
 
-Dự án hiện chưa bao gồm:
+Dự án hiện chưa tập trung vào:
 
-* Hệ thống quản lý kho quy mô lớn.
-* Tích hợp trực tiếp với đơn vị vận chuyển.
-* Thanh toán ngân hàng thực tế.
-* Ứng dụng mobile riêng.
-* Hệ thống kế toán doanh nghiệp.
+- Hệ thống quản lý kho quy mô lớn
+- Tích hợp trực tiếp với đơn vị vận chuyển thực tế
+- Thanh toán ngân hàng production
+- Ứng dụng mobile riêng
+- Hệ thống kế toán doanh nghiệp
 
 ---
 
 ## 👥 Thành viên
 
-Dự án được thực hiện bởi **05 thành viên** trong thời gian **03 tuần**.
+Dự án được thực hiện theo hình thức làm việc nhóm.
 
-| STT | Thành viên   | Vai trò                              |
-| --: | ------------ | ------------------------------------ |
-|   1 | Thành viên 1 | Phân tích yêu cầu, Backend, kiểm thử |
-|   2 | Thành viên 2 | UI/UX, Trang chủ, Danh mục           |
-|   3 | Thành viên 3 | Use Case, Cart, Checkout, Order      |
-|   4 | Thành viên 4 | ERD, Database, Migration, Model      |
-|   5 | Thành viên 5 | Sitemap, Wireframe, Admin, Báo cáo   |
+| STT | Thành viên | Vai trò chính |
+|---:|---|---|
+| 1 | Thành viên 1 | Core / Authentication / Admin |
+| 2 | Thành viên 2 | Customer / Catalog / Giao diện |
+| 3 | Thành viên 3 | Cart / Chức năng khách hàng |
+| 4 | Thành viên 4 | Checkout / Order / Payment / PayPal |
+| 5 | Thành viên 5 | Review / Statistics / Hỗ trợ hoàn thiện |
 
-Phân công chi tiết được xây dựng theo kế hoạch 3 tuần của nhóm.
+> Có thể thay tên “Thành viên 1…5” bằng họ tên và MSSV thực tế của từng thành viên trước khi nộp đồ án.
 
 ---
 
@@ -505,58 +532,59 @@ Phân công chi tiết được xây dựng theo kế hoạch 3 tuần của nh�
 
 ### Week 1 – Analysis & Design
 
-* Phân tích yêu cầu
-* Khảo sát website tương tự
-* Xác định Actor
-* Xây dựng Use Case
-* Thiết kế ERD
-* Thiết kế Sitemap
-* Thiết kế Wireframe
-* Lựa chọn công nghệ
+- Phân tích yêu cầu
+- Khảo sát website tương tự
+- Xác định Actor
+- Xây dựng Use Case
+- Thiết kế ERD
+- Thiết kế Sitemap
+- Thiết kế Wireframe
+- Lựa chọn công nghệ
 
 ### Week 2 – Development
 
-* Khởi tạo Laravel
-* Cấu hình MySQL
-* Xây dựng Database
-* Authentication
-* Product
-* Category
-* Cart
-* Checkout
-* Order
-* Admin
-* PayPal Sandbox
+- Khởi tạo Laravel
+- Cấu hình MySQL
+- Xây dựng Database
+- Authentication
+- Product / Category
+- Customer
+- Cart
+- Checkout
+- Order
+- Admin
+- PayPal Sandbox
 
 ### Week 3 – Testing & Finalization
 
-* Functional Testing
-* Cart Testing
-* Order Testing
-* Payment Testing
-* Authorization Testing
-* Responsive Testing
-* Bug Fixing
-* Hoàn thiện báo cáo
-* Chuẩn bị Demo
+- Functional Testing
+- Cart Testing
+- Checkout Testing
+- Order Testing
+- Payment Testing
+- Authorization Testing
+- Responsive Testing
+- Bug Fixing
+- Hoàn thiện báo cáo
+- Chuẩn bị demo
 
 ---
 
 ## 📚 Tài liệu tham khảo
 
-* FlowerCorner – Website bán hoa trực tuyến.
-* Dalat Hasfarm Online Shop.
-* Liti Florist.
-* Laravel Documentation.
-* MySQL Documentation.
-* PayPal Developer Documentation.
-* Tài liệu và slide môn học Thương mại điện tử.
+- Laravel Documentation
+- MySQL Documentation
+- PayPal Developer Documentation
+- FlowerCorner – Website bán hoa trực tuyến
+- Dalat Hasfarm Online Shop
+- Liti Florist
+- Tài liệu môn học và tài liệu phục vụ đồ án
 
 ---
 
-## 📄 License
+## 📄 Mục đích sử dụng
 
-This project is developed for **educational purposes** as part of the E-commerce course project.
+Project được xây dựng phục vụ **mục đích học tập và đồ án**, không phải hệ thống thương mại điện tử production.
 
 ---
 
