@@ -13,14 +13,17 @@ class Product extends Model
 {
     use HasFactory;
 
+    public const SEASONS = ['spring', 'summer', 'autumn', 'winter', 'all'];
+
     protected $fillable = [
         'category_id',
         'name',
         'slug',
         'description',
         'price',
+        'cost_price',
         'sale_price',
-        'season', // Thêm trường mùa hoa: spring, summer, autumn, winter, all
+        'season',
         'stock',
         'image',
         'is_active',
@@ -28,6 +31,7 @@ class Product extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'cost_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
         'stock' => 'integer',
         'is_active' => 'boolean',
@@ -48,7 +52,11 @@ class Product extends Model
      */
     public function scopeSeason(Builder $query, ?string $season): Builder
     {
-        if (!empty($season) && in_array($season, ['spring', 'summer', 'autumn', 'winter'])) {
+        if ($season === 'all') {
+            return $query->where('season', 'all');
+        }
+
+        if (! empty($season) && in_array($season, ['spring', 'summer', 'autumn', 'winter'], true)) {
             return $query->where(function ($q) use ($season) {
                 $q->where('season', $season)
                     ->orWhere('season', 'all');
@@ -68,7 +76,7 @@ class Product extends Model
             'summer' => 'Hoa Mùa Hạ ☀️',
             'autumn' => 'Hoa Mùa Thu 🍂',
             'winter' => 'Hoa Mùa Đông ❄️',
-            default => 'Hoa Bốn Mùa 🌿',
+            default => 'Quanh năm 🌿',
         };
     }
 
@@ -92,5 +100,10 @@ class Product extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function costHistories(): HasMany
+    {
+        return $this->hasMany(ProductCostHistory::class)->latest('effective_at');
     }
 }

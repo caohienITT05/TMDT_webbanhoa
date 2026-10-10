@@ -1,4 +1,4 @@
-@props(['title' => null])
+@props(['title' => null, 'description' => 'BloomGift - hoa tươi và quà tặng cho những khoảnh khắc đáng nhớ.', 'structuredData' => null])
 
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -8,6 +8,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#B94F64">
     <title>{{ $title ? $title . ' · ' : '' }}BloomGift</title>
+    <meta name="description" content="{{ $description }}">
+    @if ($structuredData)
+        <script type="application/ld+json">{!! json_encode($structuredData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
+    @endif
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=dm-sans:400,500,600,700%7Clora:500,600,700&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])

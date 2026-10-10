@@ -28,9 +28,9 @@
         <form action="{{ route('checkout.process') }}" method="POST" id="checkout-form" class="mt-8">
             @csrf
             <input type="hidden" name="checkout_mode" value="{{ $isBuyNow ? 'buy_now' : 'cart' }}">
-            <input type="hidden" name="shipping_fee" id="input_shipping_fee" value="0">
-            <input type="hidden" name="gift_card_fee" id="input_gift_card_fee" value="0">
-            <input type="hidden" name="gift_wrap_fee" id="input_gift_wrap_fee" value="0">
+            <input type="hidden" name="shipping_fee" id="input_shipping_fee" value="{{ old('shipping_fee', 0) }}">
+            <input type="hidden" name="gift_card_fee" id="input_gift_card_fee" value="{{ old('gift_card_fee', 0) }}">
+            <input type="hidden" name="gift_wrap_fee" id="input_gift_wrap_fee" value="{{ old('gift_wrap_fee', 0) }}">
 
             <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start">
                 <div class="space-y-5">
@@ -124,11 +124,11 @@
                             <legend class="bloom-label">Thiệp chúc mừng</legend>
                             <div class="grid gap-3 sm:grid-cols-2">
                                 <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-bloom-line p-3.5 transition hover:border-bloom-rose">
-                                    <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="card_option" id="card_none" value="0" checked data-type="card">
+                                    <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="card_option" id="card_none" value="0" @checked(old('gift_card_fee', 0) == 0) data-type="card">
                                     <span><span class="block text-sm font-semibold text-bloom-ink">Không kèm thiệp</span><span class="mt-0.5 block text-xs text-bloom-muted">0₫</span></span>
                                 </label>
                                 <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-bloom-line p-3.5 transition hover:border-bloom-rose">
-                                    <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="card_option" id="card_yes" value="10000" data-type="card">
+                                    <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="card_option" id="card_yes" value="10000" @checked(old('gift_card_fee') == 10000) data-type="card">
                                     <span><span class="block text-sm font-semibold text-bloom-ink">Thiệp lời chúc</span><span class="mt-0.5 block text-xs text-bloom-rose">+10.000₫</span></span>
                                 </label>
                             </div>
@@ -143,11 +143,11 @@
                             <legend class="bloom-label">Phong cách gói hoa & quà tặng</legend>
                             <div class="grid gap-3 sm:grid-cols-2">
                                 <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-bloom-line p-3.5 transition hover:border-bloom-rose">
-                                    <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="wrap_option" id="wrap_standard" value="0" checked data-type="wrap">
+                                    <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="wrap_option" id="wrap_standard" value="0" @checked(old('gift_wrap_fee', 0) == 0) data-type="wrap">
                                     <span><span class="block text-sm font-semibold text-bloom-ink">Gói tiêu chuẩn</span><span class="mt-0.5 block text-xs text-bloom-muted">0₫</span></span>
                                 </label>
                                 <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-bloom-line p-3.5 transition hover:border-bloom-rose">
-                                    <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="wrap_option" id="wrap_premium" value="30000" data-type="wrap">
+                                    <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="wrap_option" id="wrap_premium" value="30000" @checked(old('gift_wrap_fee') == 30000) data-type="wrap">
                                     <span><span class="block text-sm font-semibold text-bloom-ink">Gói quà cao cấp</span><span class="mt-0.5 block text-xs text-bloom-rose">+30.000₫</span></span>
                                 </label>
                             </div>
@@ -161,11 +161,11 @@
                         </div>
                         <fieldset class="mt-6 grid gap-3">
                             <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-bloom-line p-3.5 transition hover:border-bloom-rose">
-                                <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="ship_option" id="ship_standard" value="0" checked data-type="ship">
+                                <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="ship_option" id="ship_standard" value="0" @checked(old('shipping_fee', 0) == 0) data-type="ship">
                                 <span><span class="block text-sm font-semibold text-bloom-ink">Giao hàng tiêu chuẩn</span><span class="mt-0.5 block text-xs text-bloom-muted">0₫</span></span>
                             </label>
                             <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-bloom-line p-3.5 transition hover:border-bloom-rose">
-                                <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="ship_option" id="ship_express" value="30000" data-type="ship">
+                                <input class="option-calc mt-0.5 h-4 w-4 border-bloom-line text-bloom-rose focus:ring-bloom-rose" type="radio" name="ship_option" id="ship_express" value="30000" @checked(old('shipping_fee') == 30000) data-type="ship">
                                 <span><span class="block text-sm font-semibold text-bloom-ink">Giao hàng nhanh</span><span class="mt-0.5 block text-xs text-bloom-rose">+30.000₫</span></span>
                             </label>
                         </fieldset>
@@ -210,12 +210,16 @@
                         @endif
                         <div class="mt-4 flex gap-2">
                             <label class="sr-only" for="voucher_input_code">Mã giảm giá</label>
-                            <input type="text" id="voucher_input_code" class="bloom-input h-10 min-w-0 flex-1 px-3 text-sm uppercase" placeholder="NHẬP MÃ...">
+                            <input type="text" id="voucher_input_code" class="bloom-input h-10 min-w-0 flex-1 px-3 text-sm uppercase" placeholder="NHẬP MÃ..." value="{{ $voucherCode }}">
                             <button class="bloom-button bloom-button--small" type="button" onclick="submitVoucher()">Áp dụng</button>
                         </div>
-                        @if ($voucherCode)
-                            <p class="mt-3 text-xs font-medium text-emerald-700">Đang áp dụng mã {{ $voucherCode }}.</p>
-                        @endif
+                        <div id="voucher_status" class="mt-3 text-xs font-medium" aria-live="polite">
+                            @if ($voucherCode)
+                                <span class="text-emerald-700">Đang áp dụng mã {{ $voucherCode }}.</span>
+                                <button type="button" class="ml-2 text-bloom-rose underline" onclick="removeVoucher()">Bỏ mã</button>
+                            @endif
+                        </div>
+                        <p id="voucher_message" class="mt-2 text-xs" aria-live="polite"></p>
                     </section>
 
                     <section class="bloom-panel bloom-panel--padded">
@@ -230,7 +234,7 @@
                             <div class="flex justify-between gap-3"><span class="text-bloom-muted">Phí giao hàng</span><span id="label_shipping_fee" class="font-semibold text-bloom-ink">0₫</span></div>
                             <div class="flex justify-between gap-3"><span class="text-bloom-muted">Thiệp chúc</span><span id="label_gift_card_fee" class="font-semibold text-bloom-ink">0₫</span></div>
                             <div class="flex justify-between gap-3"><span class="text-bloom-muted">Gói quà</span><span id="label_gift_wrap_fee" class="font-semibold text-bloom-ink">0₫</span></div>
-                            <div class="flex justify-between gap-3"><span class="text-bloom-muted">Giảm giá voucher</span><span class="font-semibold text-emerald-700">-{{ number_format($voucherDiscount, 0, ',', '.') }}₫</span></div>
+                            <div class="flex justify-between gap-3"><span class="text-bloom-muted">Giảm giá voucher</span><span id="label_voucher_discount" class="font-semibold text-emerald-700">-{{ number_format($voucherDiscount, 0, ',', '.') }}₫</span></div>
                         </div>
                         <div class="mt-5 flex items-end justify-between gap-3 border-t border-bloom-line pt-4"><span class="font-semibold text-bloom-ink">Tổng thanh toán</span><span id="label_total_amount" class="text-xl font-bold text-bloom-rose">{{ number_format(max(0, $subtotal - $voucherDiscount), 0, ',', '.') }}₫</span></div>
                         <button type="submit" class="bloom-button mt-5 w-full">{{ $isBuyNow ? 'Đặt mua' : 'Đặt hàng ngay' }} <x-customer.icon name="shield" class="h-4 w-4" /></button>
@@ -243,7 +247,8 @@
 
     <script>
         const initialSubtotal = {{ (float) $subtotal }};
-        const discount = {{ (float) $voucherDiscount }};
+        let discount = {{ (float) $voucherDiscount }};
+        let activeVoucherCode = @json($voucherCode);
         const isBuyNow = {{ $isBuyNow ? 'true' : 'false' }};
         const buyNowUnitPrice = {{ $buyNowUnitPrice }};
 
@@ -260,7 +265,7 @@
             return buyNowUnitPrice * quantity;
         }
 
-        function calculateTotal() {
+        function calculateTotal(serverTotal = null) {
             const shipFee = parseFloat(document.querySelector('input[name="ship_option"]:checked').value);
             const cardFee = parseFloat(document.querySelector('input[name="card_option"]:checked').value);
             const wrapFee = parseFloat(document.querySelector('input[name="wrap_option"]:checked').value);
@@ -274,7 +279,9 @@
             document.getElementById('label_gift_wrap_fee').innerText = formatNumber(wrapFee);
 
             const subtotal = getSubtotal();
-            const finalTotal = Math.max(0, subtotal + shipFee + cardFee + wrapFee - discount);
+            const finalTotal = serverTotal === null
+                ? Math.max(0, subtotal + shipFee + cardFee + wrapFee - discount)
+                : serverTotal;
 
             document.getElementById('label_subtotal').innerText = formatNumber(subtotal);
             document.getElementById('label_total_amount').innerText = formatNumber(finalTotal);
@@ -287,51 +294,136 @@
             }
         }
 
-        document.querySelectorAll('.option-calc').forEach(radio => radio.addEventListener('change', calculateTotal));
+        function voucherPayload(code = '') {
+            return {
+                code,
+                checkout_mode: isBuyNow ? 'buy_now' : 'cart',
+                buy_now_quantity: isBuyNow ? document.getElementById('buy_now_quantity').value : undefined,
+                shipping_fee: document.querySelector('input[name="ship_option"]:checked').value,
+                gift_card_fee: document.querySelector('input[name="card_option"]:checked').value,
+                gift_wrap_fee: document.querySelector('input[name="wrap_option"]:checked').value,
+            };
+        }
+
+        function setVoucherMessage(message, isError = false) {
+            const messageBox = document.getElementById('voucher_message');
+            messageBox.textContent = message || '';
+            messageBox.className = 'mt-2 text-xs ' + (isError ? 'text-red-700' : 'text-emerald-700');
+        }
+
+        function renderVoucherStatus() {
+            const status = document.getElementById('voucher_status');
+            status.replaceChildren();
+
+            if (!activeVoucherCode) {
+                return;
+            }
+
+            const text = document.createElement('span');
+            text.className = 'text-emerald-700';
+            text.textContent = 'Đang áp dụng mã ' + activeVoucherCode + '.';
+            status.appendChild(text);
+
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'ml-2 text-bloom-rose underline';
+            removeButton.textContent = 'Bỏ mã';
+            removeButton.addEventListener('click', removeVoucher);
+            status.appendChild(removeButton);
+        }
+
+        function applyVoucherPreview(data) {
+            discount = Number(data.discount_amount || 0);
+            document.getElementById('label_voucher_discount').textContent = '-' + formatNumber(discount);
+            calculateTotal(Number(data.total));
+        }
+
+        async function sendVoucherRequest(url, payload) {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            return {
+                ok: response.ok,
+                data: await response.json().catch(() => ({})),
+            };
+        }
+
+        document.querySelectorAll('.option-calc').forEach(radio => radio.addEventListener('change', () => {
+            calculateTotal();
+            refreshVoucher();
+        }));
 
         function applyVoucherCode(code) {
             document.getElementById('voucher_input_code').value = code;
         }
 
-        function submitVoucher() {
+        async function submitVoucher() {
             const code = document.getElementById('voucher_input_code').value.trim();
             if (!code) {
-                alert('Vui lòng nhập mã giảm giá!');
+                setVoucherMessage('Vui lòng nhập mã giảm giá.', true);
                 return;
             }
 
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '{{ route("voucher.apply") }}';
+            try {
+                const result = await sendVoucherRequest('{{ route("voucher.apply") }}', voucherPayload(code));
+                if (!result.ok || !result.data.valid) {
+                    setVoucherMessage(result.data.message || 'Không thể áp dụng mã giảm giá.', true);
+                    return;
+                }
 
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = '_token';
-            csrfInput.value = '{{ csrf_token() }}';
-            form.appendChild(csrfInput);
-
-            const codeInput = document.createElement('input');
-            codeInput.type = 'hidden';
-            codeInput.name = 'code';
-            codeInput.value = code;
-            form.appendChild(codeInput);
-
-            const modeInput = document.createElement('input');
-            modeInput.type = 'hidden';
-            modeInput.name = 'checkout_mode';
-            modeInput.value = isBuyNow ? 'buy_now' : 'cart';
-            form.appendChild(modeInput);
-
-            if (isBuyNow) {
-                const quantityInput = document.createElement('input');
-                quantityInput.type = 'hidden';
-                quantityInput.name = 'buy_now_quantity';
-                quantityInput.value = document.getElementById('buy_now_quantity').value;
-                form.appendChild(quantityInput);
+                activeVoucherCode = result.data.voucher_code;
+                document.getElementById('voucher_input_code').value = activeVoucherCode;
+                applyVoucherPreview(result.data);
+                renderVoucherStatus();
+                setVoucherMessage(result.data.message);
+            } catch (error) {
+                setVoucherMessage('Không thể kết nối để kiểm tra mã giảm giá.', true);
             }
+        }
 
-            document.body.appendChild(form);
-            form.submit();
+        async function removeVoucher() {
+            try {
+                const result = await sendVoucherRequest('{{ route("voucher.remove") }}', voucherPayload());
+                if (!result.ok || !result.data.valid) {
+                    setVoucherMessage(result.data.message || 'Không thể hủy mã giảm giá.', true);
+                    return;
+                }
+
+                activeVoucherCode = null;
+                applyVoucherPreview(result.data);
+                renderVoucherStatus();
+                setVoucherMessage(result.data.message);
+            } catch (error) {
+                setVoucherMessage('Không thể kết nối để hủy mã giảm giá.', true);
+            }
+        }
+
+        function refreshVoucher() {
+            if (activeVoucherCode) {
+                submitVoucherWithCode(activeVoucherCode);
+            }
+        }
+
+        async function submitVoucherWithCode(code) {
+            try {
+                const result = await sendVoucherRequest('{{ route("voucher.apply") }}', voucherPayload(code));
+                if (result.ok && result.data.valid) {
+                    applyVoucherPreview(result.data);
+                }
+            } catch (error) {
+                // The current total remains visible if a background refresh fails.
+            }
+        }
+
+        if (isBuyNow) {
+            document.getElementById('buy_now_quantity').addEventListener('change', refreshVoucher);
         }
 
         calculateTotal();

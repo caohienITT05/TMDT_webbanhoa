@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductCostHistory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -46,7 +49,9 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'price' => 'required|numeric|min:0',
+            'cost_price' => 'required|numeric|min:0|max:9999999999999.99|decimal:0,2|lt:price',
             'sale_price' => 'nullable|numeric|lt:price|min:0',
+            'season' => ['required', Rule::in(Product::SEASONS)],
             'stock' => 'required|integer|min:0',
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
@@ -69,6 +74,7 @@ class ProductController extends Controller
     public function edit(Product $product)
     {
         $categories = Category::all();
+        $product->load('costHistories.changedBy');
         return view('admin.products.edit', compact('product', 'categories'));
     }
 
@@ -78,7 +84,13 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'price' => 'required|numeric|min:0',
+            'cost_price' => [
+                $product->cost_price === null ? 'nullable' : 'required',
+                'numeric', 'min:0', 'max:9999999999999.99', 'decimal:0,2', 'lt:price',
+            ],
+            'cost_change_reason' => 'nullable|string|max:1000',
             'sale_price' => 'nullable|numeric|lt:price|min:0',
+            'season' => ['required', Rule::in(Product::SEASONS)],
             'stock' => 'required|integer|min:0',
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
@@ -86,6 +98,8 @@ class ProductController extends Controller
             'sale_price.lt' => 'Giá khuyến mãi phải nhỏ hơn giá gốc!',
         ]);
 
+        $costChangeReason = $validated['cost_change_reason'] ?? null;
+        unset($validated['cost_change_reason']);
         $validated['slug'] = Str::slug($validated['name']);
         $validated['is_active'] = $request->has('is_active');
 
@@ -97,7 +111,22 @@ class ProductController extends Controller
             $validated['image'] = $request->file('image')->store('products', 'public');
         }
 
-        $product->update($validated);
+        $oldCost = $product->cost_price === null ? null : round((float) $product->cost_price, 2);
+        $newCost = $validated['cost_price'] === null ? null : round((float) $validated['cost_price'], 2);
+
+        DB::transaction(function () use ($costChangeReason, $newCost, $oldCost, $product, $validated): void {
+            $product->update($validated);
+            if ($newCost !== null && $oldCost !== $newCost) {
+                ProductCostHistory::create([
+                    'product_id' => $product->id,
+                    'old_cost_price' => $oldCost,
+                    'new_cost_price' => $newCost,
+                    'effective_at' => now(),
+                    'changed_by' => auth()->id(),
+                    'reason' => $costChangeReason,
+                ]);
+            }
+        });
 
         return redirect()->route('admin.products.index')->with('success', 'Cập nhật sản phẩm thành công!');
     }

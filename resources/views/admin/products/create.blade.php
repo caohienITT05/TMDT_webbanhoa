@@ -43,15 +43,15 @@
                     </label>
                     <select name="season" required
                         class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-rose-500 bg-white">
-                        <option value="all" {{ old('season', 'all') == 'all' ? 'selected' : '' }}>🌿 Hoa bốn mùa (Quanh năm)
+                        <option value="all" {{ old('season', 'all') == 'all' ? 'selected' : '' }}>🌿 Quanh năm
                         </option>
-                        <option value="spring" {{ old('season') == 'spring' ? 'selected' : '' }}>🌸 Mùa Xuân (Đào, Mai, Tulip,
+                        <option value="spring" {{ old('season') == 'spring' ? 'selected' : '' }}>🌸 Mùa xuân (Đào, Mai, Tulip,
                             Thược dược...)</option>
-                        <option value="summer" {{ old('season') == 'summer' ? 'selected' : '' }}>☀️ Mùa Hạ (Sen, Hướng dương,
+                        <option value="summer" {{ old('season') == 'summer' ? 'selected' : '' }}>☀️ Mùa hạ (Sen, Hướng dương,
                             Cát tường...)</option>
-                        <option value="autumn" {{ old('season') == 'autumn' ? 'selected' : '' }}>🍂 Mùa Thu (Cúc họa mi, Thạch
+                        <option value="autumn" {{ old('season') == 'autumn' ? 'selected' : '' }}>🍂 Mùa thu (Cúc họa mi, Thạch
                             thảo, Cam ấm...)</option>
-                        <option value="winter" {{ old('season') == 'winter' ? 'selected' : '' }}>❄️ Mùa Đông (Cẩm tú cầu,
+                        <option value="winter" {{ old('season') == 'winter' ? 'selected' : '' }}>❄️ Mùa đông (Lily, hoa trắng,
                             Trạng nguyên, Baby tuyết...)</option>
                     </select>
                     @error('season') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
@@ -77,6 +77,11 @@
                 </div>
 
                 <!-- 6. Giá khuyến mãi -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Giá vốn thực tế (VNĐ) <span class="text-red-500">*</span></label>
+                    <input type="number" name="cost_price" value="{{ old('cost_price') }}" min="0" step="0.01" required class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm">
+                    @error('cost_price') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Giá khuyến mãi (VNĐ - nếu có)</label>
                     <input type="number" name="sale_price" value="{{ old('sale_price') }}" placeholder="299000" min="0"

@@ -49,11 +49,11 @@
                     </div>
                     <div>
                         <label class="bloom-label" for="occasion">Dịp tặng</label>
-                        <input type="text" id="occasion" name="occasion" value="{{ old('occasion') }}" class="bloom-input h-11 w-full px-3" placeholder="Sinh nhật, khai trương...">
+                        <input type="text" id="occasion" name="occasion" value="{{ old('occasion', $prefill['occasion'] ?? '') }}" class="bloom-input h-11 w-full px-3" placeholder="Sinh nhật, khai trương...">
                     </div>
                     <div>
                         <label class="bloom-label" for="flower_type">Loại hoa mong muốn</label>
-                        <input type="text" id="flower_type" name="flower_type" value="{{ old('flower_type') }}" class="bloom-input h-11 w-full px-3" placeholder="Hoa hồng, tulip...">
+                        <input type="text" id="flower_type" name="flower_type" value="{{ old('flower_type', $prefill['flower_type'] ?? '') }}" class="bloom-input h-11 w-full px-3" placeholder="Hoa hồng, tulip...">
                     </div>
                     <div>
                         <label class="bloom-label" for="quantity">Số lượng</label>
@@ -61,7 +61,7 @@
                     </div>
                     <div>
                         <label class="bloom-label" for="budget">Ngân sách dự kiến</label>
-                        <input type="number" id="budget" name="budget" min="0" step="1000" value="{{ old('budget') }}" class="bloom-input h-11 w-full px-3" placeholder="Ví dụ: 700000">
+                        <input type="number" id="budget" name="budget" min="0" step="1000" value="{{ old('budget', $prefill['budget'] ?? '') }}" class="bloom-input h-11 w-full px-3" placeholder="Ví dụ: 700000">
                     </div>
                     <div>
                         <label class="bloom-label" for="delivery_date">Ngày cần giao</label>
@@ -73,7 +73,7 @@
                     </div>
                     <div class="sm:col-span-2">
                         <label class="bloom-label" for="message">Nội dung/yêu cầu chi tiết</label>
-                        <textarea id="message" name="message" rows="5" class="bloom-textarea w-full" placeholder="Màu sắc, kiểu bó hoa, thông điệp muốn gửi...">{{ old('message') }}</textarea>
+                        <textarea id="message" name="message" rows="5" class="bloom-textarea w-full" placeholder="Màu sắc, kiểu bó hoa, thông điệp muốn gửi...">{{ old('message', $prefill['message'] ?? '') }}</textarea>
                     </div>
                     <div class="flex flex-wrap items-center gap-3 sm:col-span-2">
                         <button type="submit" class="bloom-button">Gửi yêu cầu đặt hoa <x-customer.icon name="arrow-right" class="h-4 w-4" /></button>

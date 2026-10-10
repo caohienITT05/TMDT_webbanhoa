@@ -6,13 +6,28 @@ use App\Http\Controllers\Controller;
 use App\Models\CustomOrderRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class CustomOrderController extends Controller
 {
     public function create(Request $request): View
     {
-        return view('Customer.custom-order', ['customer' => $request->user()]);
+        $limits = [
+            'occasion' => 255,
+            'flower_type' => 255,
+            'budget' => 20,
+            'message' => 2000,
+        ];
+        $prefill = [];
+        foreach ($limits as $field => $limit) {
+            $value = $request->query($field);
+            if (is_scalar($value)) {
+                $prefill[$field] = Str::limit(trim((string) $value), $limit, '');
+            }
+        }
+
+        return view('Customer.custom-order', ['customer' => $request->user(), 'prefill' => $prefill]);
     }
 
     public function store(Request $request): RedirectResponse

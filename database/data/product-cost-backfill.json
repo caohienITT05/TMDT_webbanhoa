@@ -1,0 +1,64 @@
+[
+  {
+    "slug": "bo-hoa-hong-do-ecua-dor",
+    "cost_price": 430000,
+    "confirmed": true,
+    "reason": "Giá vốn demo riêng cho sản phẩm, được người dùng cho phép ngày 05/10/2026"
+  },
+  {
+    "slug": "ke-hoa-khai-truong-phat-tai",
+    "cost_price": 710000,
+    "sale_price": 1099000,
+    "confirmed": true,
+    "reason": "Giá vốn demo riêng cho sản phẩm, được người dùng cho phép ngày 05/10/2026"
+  },
+  {
+    "slug": "gio-hoa-huong-duong-nang-som",
+    "cost_price": 235000,
+    "confirmed": true,
+    "reason": "Giá vốn demo riêng cho sản phẩm, được người dùng cho phép ngày 05/10/2026"
+  },
+  {
+    "slug": "bo-hoa-hong-hien-cao",
+    "cost_price": 150000,
+    "confirmed": true,
+    "reason": "Giá vốn demo riêng cho sản phẩm, được người dùng cho phép ngày 05/10/2026"
+  },
+  {
+    "slug": "hoa-tulip",
+    "cost_price": 205000,
+    "sale_price": 319000,
+    "confirmed": true,
+    "reason": "Giá vốn demo riêng cho sản phẩm, được người dùng cho phép ngày 05/10/2026"
+  },
+  {
+    "slug": "bo-hoa-baby-trang-tinh-khoi",
+    "cost_price": 172000,
+    "confirmed": true,
+    "reason": "Giá vốn demo riêng cho sản phẩm, được người dùng cho phép ngày 05/10/2026"
+  },
+  {
+    "slug": "bo-cuc-hoa-mi-diu-dang",
+    "cost_price": 198000,
+    "confirmed": true,
+    "reason": "Giá vốn demo riêng cho sản phẩm, được người dùng cho phép ngày 05/10/2026"
+  },
+  {
+    "slug": "gio-hoa-do-sang-trong",
+    "cost_price": 375000,
+    "confirmed": true,
+    "reason": "Giá vốn demo riêng cho sản phẩm, được người dùng cho phép ngày 05/10/2026"
+  },
+  {
+    "slug": "bo-hoa-hong-kem-thanh-nha",
+    "cost_price": 415000,
+    "confirmed": true,
+    "reason": "Giá vốn demo riêng cho sản phẩm, được người dùng cho phép ngày 05/10/2026"
+  },
+  {
+    "slug": "set-qua-hong-pastel-yeu-thuong",
+    "cost_price": 265000,
+    "confirmed": true,
+    "reason": "Giá vốn demo riêng cho sản phẩm, được người dùng cho phép ngày 05/10/2026"
+  }
+]

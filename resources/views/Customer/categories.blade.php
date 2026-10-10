@@ -1,4 +1,4 @@
-<x-customer.layout title="Danh mục hoa">
+<x-customer.layout title="Danh mục hoa" description="Khám phá danh mục hoa BloomGift theo dịp, cảm xúc và từng nhóm sản phẩm.">
     @php
         $categoryImages = [
             'images/Categories/hoa-sinh-nhat.jpg',
@@ -35,6 +35,16 @@
                             </div>
                             <a href="{{ route('categories.show', $category->slug) }}" class="bloom-icon-button shrink-0 bg-bloom-blush text-bloom-rose" aria-label="Xem {{ $category->name }}"><x-customer.icon name="arrow-right" class="h-4 w-4" /></a>
                         </div>
+                        @if ($category->children->isNotEmpty())
+                            <div class="border-t border-bloom-line bg-bloom-canvas px-5 py-4">
+                                <p class="text-xs font-bold uppercase tracking-[.12em] text-bloom-muted">Danh mục con</p>
+                                <ul class="mt-2 space-y-1.5 text-sm">
+                                    @foreach ($category->children as $child)
+                                        <li><a href="{{ route('categories.show', $child->slug) }}" class="bloom-text-link inline-flex items-center gap-1">{{ $child->name }} <span class="text-bloom-muted">({{ number_format($child->products_count) }})</span></a></li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
                     </article>
                 @endforeach
             </div>

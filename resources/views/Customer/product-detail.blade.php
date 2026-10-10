@@ -1,13 +1,30 @@
-<x-customer.layout :title="$product->name">
-    @php
-        $originalPrice = (float) ($product->price ?? 0);
-        $salePrice = $product->sale_price !== null ? (float) $product->sale_price : null;
-        $hasSale = $salePrice !== null && $salePrice > 0 && $salePrice < $originalPrice;
-        $currentPrice = $hasSale ? $salePrice : $originalPrice;
-        $discountPercent = $hasSale && $originalPrice > 0 ? (int) round((1 - ($salePrice / $originalPrice)) * 100) : 0;
-        $isFavorite = in_array($product->id, session('favorites', []));
-        $category = $product->category;
-    @endphp
+@php
+    $originalPrice = (float) ($product->price ?? 0);
+    $salePrice = $product->sale_price !== null ? (float) $product->sale_price : null;
+    $hasSale = $salePrice !== null && $salePrice > 0 && $salePrice < $originalPrice;
+    $currentPrice = $hasSale ? $salePrice : $originalPrice;
+    $discountPercent = $hasSale && $originalPrice > 0 ? (int) round((1 - ($salePrice / $originalPrice)) * 100) : 0;
+    $isFavorite = in_array($product->id, session('favorites', []));
+    $category = $product->category;
+    $structuredData = [
+        '@context' => 'https://schema.org',
+        '@type' => 'Product',
+        'name' => $product->name,
+        'description' => strip_tags($product->description ?: $product->name),
+        'url' => route('product.detail', $product->slug),
+        'offers' => [
+            '@type' => 'Offer',
+            'priceCurrency' => 'VND',
+            'price' => (string) $currentPrice,
+            'availability' => (int) $product->stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+            'url' => route('product.detail', $product->slug),
+        ],
+    ];
+    if ($product->image) {
+        $structuredData['image'] = [asset('storage/' . $product->image)];
+    }
+@endphp
+<x-customer.layout :title="$product->name" :description="\Illuminate\Support\Str::limit(strip_tags($product->description ?: $product->name), 155)" :structured-data="$structuredData">
 
     <x-customer.breadcrumb :items="array_filter([
         ['label' => 'Trang chủ', 'url' => route('home')],

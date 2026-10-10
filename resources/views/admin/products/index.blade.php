@@ -61,11 +61,11 @@
             <select name="season"
                 class="bg-white rounded-full border border-rose-200 px-4 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-rose-400">
                 <option value="">-- Tất cả mùa vụ --</option>
-                <option value="spring" {{ request('season') == 'spring' ? 'selected' : '' }}>🌸 Mùa Xuân</option>
-                <option value="summer" {{ request('season') == 'summer' ? 'selected' : '' }}>☀️ Mùa Hạ</option>
-                <option value="autumn" {{ request('season') == 'autumn' ? 'selected' : '' }}>🍂 Mùa Thu</option>
-                <option value="winter" {{ request('season') == 'winter' ? 'selected' : '' }}>❄️ Mùa Đông</option>
-                <option value="all" {{ request('season') == 'all' ? 'selected' : '' }}>🌿 Bốn mùa</option>
+                <option value="spring" {{ request('season') == 'spring' ? 'selected' : '' }}>🌸 Mùa xuân</option>
+                <option value="summer" {{ request('season') == 'summer' ? 'selected' : '' }}>☀️ Mùa hạ</option>
+                <option value="autumn" {{ request('season') == 'autumn' ? 'selected' : '' }}>🍂 Mùa thu</option>
+                <option value="winter" {{ request('season') == 'winter' ? 'selected' : '' }}>❄️ Mùa đông</option>
+                <option value="all" {{ request('season') == 'all' ? 'selected' : '' }}>🌿 Quanh năm</option>
             </select>
 
             <x-admin.button type="submit" variant="primary" size="sm">Lọc</x-admin.button>
@@ -81,19 +81,19 @@
             </a>
             <a href="{{ request()->fullUrlWithQuery(['season' => 'spring']) }}"
                 class="px-3 py-1 rounded-full whitespace-nowrap transition {{ request('season') == 'spring' ? 'bg-rose-500 text-white font-semibold' : 'bg-white border border-rose-200 text-gray-600 hover:bg-rose-50' }}">
-                🌸 Mùa Xuân
+                🌸 Mùa xuân
             </a>
             <a href="{{ request()->fullUrlWithQuery(['season' => 'summer']) }}"
                 class="px-3 py-1 rounded-full whitespace-nowrap transition {{ request('season') == 'summer' ? 'bg-rose-500 text-white font-semibold' : 'bg-white border border-rose-200 text-gray-600 hover:bg-rose-50' }}">
-                ☀️ Mùa Hạ
+                ☀️ Mùa hạ
             </a>
             <a href="{{ request()->fullUrlWithQuery(['season' => 'autumn']) }}"
                 class="px-3 py-1 rounded-full whitespace-nowrap transition {{ request('season') == 'autumn' ? 'bg-rose-500 text-white font-semibold' : 'bg-white border border-rose-200 text-gray-600 hover:bg-rose-50' }}">
-                🍂 Mùa Thu
+                🍂 Mùa thu
             </a>
             <a href="{{ request()->fullUrlWithQuery(['season' => 'winter']) }}"
                 class="px-3 py-1 rounded-full whitespace-nowrap transition {{ request('season') == 'winter' ? 'bg-rose-500 text-white font-semibold' : 'bg-white border border-rose-200 text-gray-600 hover:bg-rose-50' }}">
-                ❄️ Mùa Đông
+                ❄️ Mùa đông
             </a>
         </div>
 
@@ -108,6 +108,7 @@
                             <th class="p-3.5 px-5">Danh mục</th>
                             <th class="p-3.5 px-5">Mùa vụ</th>
                             <th class="p-3.5 px-5">Giá bán</th>
+                            <th class="p-3.5 px-5">Giá vốn</th>
                             <th class="p-3.5 px-5">Giá Sale</th>
                             <th class="p-3.5 px-5 text-center">Tồn kho</th>
                             <th class="p-3.5 px-5">Trạng thái</th>
@@ -146,6 +147,9 @@
                                 </td>
                                 <td class="p-3 px-5 font-bold text-gray-800">{{ number_format($prod->price, 0, ',', '.') }} đ
                                 </td>
+                                <td class="p-3 px-5 font-semibold {{ $prod->cost_price === null ? 'text-amber-600' : 'text-gray-800' }}">
+                                    {{ $prod->cost_price === null ? 'Chưa có dữ liệu' : number_format($prod->cost_price, 0, ',', '.') . ' đ' }}
+                                </td>
                                 <td class="p-3 px-5 font-bold text-rose-500">
                                     {{ $prod->sale_price ? number_format($prod->sale_price, 0, ',', '.') . ' đ' : '—' }}
                                 </td>
@@ -176,7 +180,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="p-8 text-center text-gray-400">Chưa có sản phẩm nào phù hợp.</td>
+                                <td colspan="10" class="p-8 text-center text-gray-400">Chưa có sản phẩm nào phù hợp.</td>
                             </tr>
                         @endforelse
                     </tbody>

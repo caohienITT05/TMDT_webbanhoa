@@ -46,6 +46,35 @@ trait CreatesBloomGiftData
                 $table->decimal('total', 15, 2)->default(0);
             }
         });
+
+        // The production database already uses this voucher shape. Keep the
+        // in-memory test schema aligned without changing application migrations.
+        Schema::table('vouchers', function (Blueprint $table): void {
+            if (! Schema::hasColumn('vouchers', 'name')) {
+                $table->string('name')->nullable();
+            }
+            if (! Schema::hasColumn('vouchers', 'type')) {
+                $table->string('type')->nullable();
+            }
+            if (! Schema::hasColumn('vouchers', 'value')) {
+                $table->decimal('value', 12, 2)->nullable();
+            }
+            if (! Schema::hasColumn('vouchers', 'min_order_amount')) {
+                $table->decimal('min_order_amount', 12, 2)->default(0);
+            }
+            if (! Schema::hasColumn('vouchers', 'max_discount')) {
+                $table->decimal('max_discount', 12, 2)->nullable();
+            }
+            if (! Schema::hasColumn('vouchers', 'start_time')) {
+                $table->dateTime('start_time')->nullable();
+            }
+            if (! Schema::hasColumn('vouchers', 'end_time')) {
+                $table->dateTime('end_time')->nullable();
+            }
+            if (! Schema::hasColumn('vouchers', 'used_count')) {
+                $table->unsignedInteger('used_count')->default(0);
+            }
+        });
     }
 
     protected function createCustomer(array $attributes = []): User

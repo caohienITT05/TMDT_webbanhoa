@@ -1,9 +1,10 @@
-<x-customer.layout :title="isset($category) ? $category->name : 'Sản phẩm'">
+<x-customer.layout :title="isset($category) ? $category->name : 'Sản phẩm'" :description="isset($category) ? 'Khám phá các sản phẩm thuộc danh mục ' . $category->name . '.' : 'Chọn hoa và quà tặng phù hợp cho từng khoảnh khắc.'">
     @php
         $pageTitle = isset($category) ? $category->name : 'Sản phẩm';
         $pageDescription = isset($category)
             ? 'Khám phá các sản phẩm thuộc danh mục ' . $category->name . '.'
             : 'Chọn hoa và quà tặng phù hợp cho từng khoảnh khắc.';
+        $selectedCategoryId = request('category', isset($category) ? $category->id : '');
     @endphp
 
     <x-customer.breadcrumb :items="array_filter([
@@ -22,7 +23,7 @@
             <p class="text-sm text-bloom-muted">{{ number_format($products->total()) }} sản phẩm</p>
         </div>
 
-        <form action="{{ route('products.index') }}" method="GET" class="bloom-panel mt-6 grid gap-3 p-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+        <form action="{{ route('products.index') }}" method="GET" class="bloom-panel mt-6 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 sm:items-end">
             <div>
                 <label class="bloom-label" for="product-search">Tìm kiếm</label>
                 <div class="relative">
@@ -35,13 +36,47 @@
                 <select id="product-category" name="category" class="bloom-select w-full min-w-44">
                     <option value="">Tất cả danh mục</option>
                     @foreach ($categories as $item)
-                        <option value="{{ $item->id }}" @selected((string) request('category') === (string) $item->id)>{{ $item->name }}</option>
+                        <option value="{{ $item->id }}" @selected((string) $selectedCategoryId === (string) $item->id)>{{ $item->parent_id ? '— ' : '' }}{{ $item->name }}</option>
                     @endforeach
                 </select>
             </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="bloom-label" for="min-price">Giá từ</label>
+                    <input id="min-price" name="min_price" type="number" min="0" step="1000" value="{{ request('min_price') }}" class="bloom-input h-11 w-full px-3" placeholder="0">
+                </div>
+                <div>
+                    <label class="bloom-label" for="max-price">Giá đến</label>
+                    <input id="max-price" name="max_price" type="number" min="0" step="1000" value="{{ request('max_price') }}" class="bloom-input h-11 w-full px-3" placeholder="Không giới hạn">
+                </div>
+            </div>
+            <div>
+                <label class="bloom-label" for="product-season">Mùa vụ</label>
+                <select id="product-season" name="season" class="bloom-select h-11 w-full">
+                    <option value="">Tất cả mùa vụ</option>
+                    <option value="spring" @selected(request('season') === 'spring')>Mùa xuân</option>
+                    <option value="summer" @selected(request('season') === 'summer')>Mùa hạ</option>
+                    <option value="autumn" @selected(request('season') === 'autumn')>Mùa thu</option>
+                    <option value="winter" @selected(request('season') === 'winter')>Mùa đông</option>
+                    <option value="all" @selected(request('season') === 'all')>Quanh năm</option>
+                </select>
+            </div>
+            <div>
+                <label class="bloom-label" for="product-sort">Sắp xếp</label>
+                <select id="product-sort" name="sort" class="bloom-select h-11 w-full">
+                    <option value="">Mặc định</option>
+                    <option value="price_asc" @selected(request('sort') === 'price_asc')>Giá tăng dần</option>
+                    <option value="price_desc" @selected(request('sort') === 'price_desc')>Giá giảm dần</option>
+                    <option value="newest" @selected(request('sort') === 'newest')>Mới nhất</option>
+                </select>
+            </div>
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:col-span-2 lg:col-span-3 xl:col-span-2">
+                <label class="inline-flex items-center gap-2"><input type="checkbox" name="in_stock" value="1" @checked(request()->boolean('in_stock'))> Còn hàng</label>
+                <label class="inline-flex items-center gap-2"><input type="checkbox" name="sale" value="1" @checked(request()->boolean('sale'))> Đang khuyến mãi</label>
+            </div>
             <div class="flex gap-2">
                 <button type="submit" class="bloom-button flex-1 sm:flex-none">Lọc sản phẩm</button>
-                @if (request()->filled('search') || request()->filled('category'))
+                @if (request()->filled('search') || request()->filled('category') || request()->filled('min_price') || request()->filled('max_price') || request()->filled('season') || request()->boolean('in_stock') || request()->boolean('sale') || request()->filled('sort'))
                     <a href="{{ route('products.index') }}" class="bloom-button bloom-button--ghost flex-1 sm:flex-none">Xóa lọc</a>
                 @endif
             </div>

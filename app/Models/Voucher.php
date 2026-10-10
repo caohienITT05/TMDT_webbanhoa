@@ -32,6 +32,17 @@ class Voucher extends Model
             ->whereColumn('used_count', '<', 'usage_limit');
     }
 
+    public function isRedeemableFor(float $orderTotal): bool
+    {
+        $now = now();
+
+        return $this->is_active
+            && $this->start_time?->lte($now)
+            && $this->end_time?->gte($now)
+            && (int) $this->used_count < (int) $this->usage_limit
+            && $orderTotal >= (float) $this->min_order_amount;
+    }
+
     /**
      * Tính toán số tiền được giảm dựa trên giá trị đơn hàng
      */

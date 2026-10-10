@@ -53,4 +53,27 @@ return [
         ),
     ],
 
+    // Server-side only. Supports OpenAI-compatible providers, including
+    // OpenRouter. No provider request is sent unless a key is configured.
+    'bloomgift_ai' => [
+        'driver' => env('BLOOMGIFT_AI_PROVIDER', 'none'),
+        'api_key' => env('BLOOMGIFT_AI_API_KEY'),
+        'base_url' => env('BLOOMGIFT_AI_BASE_URL', env('BLOOMGIFT_AI_PROVIDER') === 'openrouter' ? 'https://openrouter.ai/api/v1' : 'https://api.openai.com/v1'),
+        'model' => env('BLOOMGIFT_AI_MODEL', env('BLOOMGIFT_AI_PROVIDER') === 'openrouter' ? 'openrouter/free' : null),
+        'http_referer' => env('BLOOMGIFT_AI_HTTP_REFERER'),
+        'title' => env('BLOOMGIFT_AI_TITLE', 'BloomGift'),
+        'timeout' => (int) env('BLOOMGIFT_AI_TIMEOUT', 20),
+        'stream_timeout' => (int) env('BLOOMGIFT_AI_STREAM_TIMEOUT', 45),
+        'json_mode' => env('BLOOMGIFT_AI_JSON_MODE', true),
+    ],
+
+    // Brave Search is optional inspiration research for the configured AI.
+    // BloomGift product data is never sourced from these results.
+    'bloomgift_web_search' => [
+        'driver' => env('BLOOMGIFT_WEB_SEARCH_PROVIDER', 'none'),
+        'api_key' => env('BLOOMGIFT_WEB_SEARCH_API_KEY'),
+        'base_url' => env('BLOOMGIFT_WEB_SEARCH_BASE_URL', 'https://api.search.brave.com/res/v1/web/search'),
+        'timeout' => (int) env('BLOOMGIFT_WEB_SEARCH_TIMEOUT', 5),
+    ],
+
 ];

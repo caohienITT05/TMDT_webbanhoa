@@ -39,7 +39,8 @@ class PayPalCheckoutTest extends TestCase
 
         $response->assertRedirect('https://paypal.test/approve/TEST-PAYPAL-ORDER-001');
         Http::assertSent(fn (ClientRequest $request) => $request->url() === 'https://paypal.test/v1/oauth2/token');
-        Http::assertSent(fn (ClientRequest $request) => $request->url() === 'https://paypal.test/v2/checkout/orders');
+        Http::assertSent(fn (ClientRequest $request) => $request->url() === 'https://paypal.test/v2/checkout/orders'
+            && data_get($request->data(), 'purchase_units.0.amount.value') === number_format((float) $order->total / 26054, 2, '.', ''));
     }
 
     public function test_paypal_success_captures_payment_with_fake_http_and_confirms_order(): void

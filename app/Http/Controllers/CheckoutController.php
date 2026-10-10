@@ -9,17 +9,43 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Voucher;
+use App\Support\CheckoutPricing;
 use App\Mail\OrderConfirmationMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
 {
+    private function orderOwnedByCurrentCustomer(int|string|null $orderId): Order
+    {
+        $order = Order::findOrFail($orderId);
+
+        abort_unless((int) $order->user_id === (int) Auth::id(), 403);
+
+        return $order;
+    }
+
+    private function logTransaction(string $event, Order $order, array $context = []): void
+    {
+        Log::channel('transactions')->info($event, array_merge([
+            'order_id' => $order->id,
+            'order_code' => $order->order_code,
+            'user_id' => $order->user_id,
+            'payment_method' => $order->payment_method,
+            'amount' => (float) $order->total,
+            'payment_status' => $order->payment_status,
+            'order_status' => $order->order_status,
+        ], $context));
+    }
+
     private function cartItemsForCurrentCustomer()
     {
         return CartItem::with('product')
@@ -39,6 +65,69 @@ class CheckoutController extends Controller
         $salePrice = (float) ($product->sale_price ?? 0);
 
         return $salePrice > 0 && $salePrice < $regularPrice ? $salePrice : $regularPrice;
+    }
+
+    private function lockedVoucherForCheckout(?int $voucherId, float $subtotal): ?Voucher
+    {
+        if (! $voucherId) {
+            return null;
+        }
+
+        $voucher = Voucher::query()->lockForUpdate()->find($voucherId);
+
+        return $voucher && $voucher->isRedeemableFor($subtotal) ? $voucher : null;
+    }
+
+    private function paypalVoucherSessionKey(int $orderId): string
+    {
+        return 'paypal_voucher_for_order_' . $orderId;
+    }
+
+    private function rememberVoucherForPayPal(Order $order, ?Voucher $voucher): void
+    {
+        if ($voucher) {
+            Session::put($this->paypalVoucherSessionKey($order->id), $voucher->id);
+        }
+    }
+
+    private function paypalVoucherIdForOrder(Order $order): ?int
+    {
+        $voucherId = (int) Session::get($this->paypalVoucherSessionKey($order->id), 0);
+
+        return $voucherId > 0 ? $voucherId : null;
+    }
+
+    private function capturePayPalOrder(?string $token): void
+    {
+        $clientId = config('services.paypal.client_id');
+        $secret = config('services.paypal.client_secret');
+
+        // The local demo uses the existing mock callback. A configured gateway
+        // must return a successful capture before the order is marked paid.
+        if (empty($clientId) || empty($secret)) {
+            return;
+        }
+
+        if (! $token) {
+            throw new \RuntimeException('Thiếu mã xác nhận thanh toán PayPal.');
+        }
+
+        $baseUrl = config('services.paypal.base_url', 'https://api-m.sandbox.paypal.com');
+        $authResponse = Http::asForm()
+            ->withBasicAuth($clientId, $secret)
+            ->post("{$baseUrl}/v1/oauth2/token", ['grant_type' => 'client_credentials']);
+
+        if (! $authResponse->successful()) {
+            throw new \RuntimeException('Không thể xác thực với PayPal.');
+        }
+
+        $captureResponse = Http::withToken($authResponse->json('access_token'))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post("{$baseUrl}/v2/checkout/orders/{$token}/capture");
+
+        if (! $captureResponse->successful()) {
+            throw new \RuntimeException('PayPal chưa xác nhận giao dịch.');
+        }
     }
 
     private function checkoutView($cartItems, float $subtotal, string $checkoutMode = 'cart', ?Product $buyNowProduct = null, ?int $buyNowQuantity = null)
@@ -131,9 +220,9 @@ class CheckoutController extends Controller
             'delivery_date' => 'required|date|after_or_equal:today',
             'delivery_slot_id' => 'required',
             'payment_method' => 'required|in:cod,paypal',
-            'shipping_fee' => 'nullable|numeric|min:0',
-            'gift_card_fee' => 'nullable|numeric|min:0',
-            'gift_wrap_fee' => 'nullable|numeric|min:0',
+            'shipping_fee' => ['nullable', 'numeric', Rule::in(CheckoutPricing::SHIPPING_FEES)],
+            'gift_card_fee' => ['nullable', 'numeric', Rule::in(CheckoutPricing::GIFT_CARD_FEES)],
+            'gift_wrap_fee' => ['nullable', 'numeric', Rule::in(CheckoutPricing::GIFT_WRAP_FEES)],
             'card_message' => 'nullable|string|max:500',
             'order_note' => 'nullable|string|max:500',
         ]);
@@ -192,22 +281,9 @@ class CheckoutController extends Controller
             }
         }
 
-        // Nhận các loại phí được chọn từ trang Checkout
-        $shippingFee = (float) $request->input('shipping_fee', 0);
-        $giftCardFee = (float) $request->input('gift_card_fee', 0);
-        $giftWrapFee = (float) $request->input('gift_wrap_fee', 0);
+        $fees = CheckoutPricing::fees($validated);
         $voucherKeyPrefix = $checkoutMode === 'buy_now' ? 'buy_now_voucher_' : 'voucher_';
-        $discount = min((float) Session::get($voucherKeyPrefix . 'discount', 0), $subtotal);
-
-        if ($checkoutMode === 'buy_now') {
-            $voucher = Voucher::valid()->find(Session::get('buy_now_voucher_id'));
-            $discount = $voucher && $subtotal >= (float) $voucher->min_order_amount
-                ? min((float) $voucher->calculateDiscount($subtotal), $subtotal)
-                : 0;
-        }
-
-        // Tổng tiền cuối cùng
-        $total = max(0, $subtotal + $shippingFee + $giftCardFee + $giftWrapFee - $discount);
+        $voucherId = (int) Session::get($voucherKeyPrefix . 'id');
 
         // Gom Lời chúc thiệp + Ghi chú vào một chuỗi hoàn chỉnh
         $noteParts = [];
@@ -221,7 +297,17 @@ class CheckoutController extends Controller
 
 
         // Lưu đơn hàng an toàn qua DB Transaction
-        $order = DB::transaction(function () use ($validated, $orderProducts, $subtotal, $discount, $shippingFee, $total, $fullNote) {
+        [$order, $voucher] = DB::transaction(function () use ($validated, $orderProducts, $subtotal, $fees, $voucherId, $fullNote) {
+            $voucher = $this->lockedVoucherForCheckout($voucherId, $subtotal);
+
+            if ($voucherId && ! $voucher) {
+                throw ValidationException::withMessages([
+                    'voucher' => 'Mã giảm giá không còn hợp lệ. Vui lòng áp dụng lại mã khác.',
+                ]);
+            }
+
+            $discount = $voucher ? min((float) $voucher->calculateDiscount($subtotal), $subtotal) : 0;
+            $total = CheckoutPricing::total($subtotal, $fees, $discount);
             $orderCode = 'BG' . now()->format('YmdHis') . strtoupper(Str::random(4));
 
             $order = Order::create([
@@ -234,7 +320,7 @@ class CheckoutController extends Controller
                 'delivery_slot_id' => $validated['delivery_slot_id'],
                 'subtotal' => $subtotal,
                 'discount' => $discount,
-                'shipping_fee' => $shippingFee,
+                'shipping_fee' => $fees['shipping_fee'],
                 'total' => $total,
                 'total_amount' => $total,
                 'payment_method' => $validated['payment_method'],
@@ -264,8 +350,18 @@ class CheckoutController extends Controller
                 'paid_at' => null,
             ]);
 
-            return $order;
+            if ($voucher && $validated['payment_method'] === 'cod') {
+                $voucher->increment('used_count');
+            }
+
+            return [$order, $voucher];
         });
+
+        if ($validated['payment_method'] === 'paypal') {
+            $this->rememberVoucherForPayPal($order, $voucher);
+        }
+
+        $this->logTransaction('order_created', $order);
 
         // Cart checkout clears only its own cart. Buy Now never touches cart_items.
         if ($checkoutMode === 'cart' && Auth::check()) {
@@ -311,7 +407,8 @@ class CheckoutController extends Controller
      */
     public function paypalCreate($orderId)
     {
-        $order = Order::findOrFail($orderId);
+        $order = $this->orderOwnedByCurrentCustomer($orderId);
+        $this->logTransaction('payment_initiated', $order);
 
         $clientId = config('services.paypal.client_id');
         $secret = config('services.paypal.client_secret');
@@ -378,6 +475,8 @@ class CheckoutController extends Controller
 
             throw new \Exception('Không lấy được link thanh toán từ PayPal.');
         } catch (\Throwable $e) {
+            $this->logTransaction('payment_failed', $order);
+
             return redirect()->route('checkout.index')->with('error', 'Lỗi PayPal: ' . $e->getMessage());
         }
     }
@@ -388,45 +487,66 @@ class CheckoutController extends Controller
     public function paypalSuccess(Request $request)
     {
         $orderId = $request->query('order_id');
-        $order = Order::findOrFail($orderId);
+        $order = $this->orderOwnedByCurrentCustomer($orderId);
+        $voucherId = $this->paypalVoucherIdForOrder($order);
 
-        $token = $request->query('token');
-        $clientId = config('services.paypal.client_id');
-        $secret = config('services.paypal.client_secret');
-        $baseUrl = config('services.paypal.base_url', 'https://api-m.sandbox.paypal.com');
+        try {
+            $order = DB::transaction(function () use ($order, $request, $voucherId) {
+                $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
+                $payment = Payment::query()
+                    ->where('order_id', $lockedOrder->id)
+                    ->latest('id')
+                    ->lockForUpdate()
+                    ->first();
 
-        if ($token && !empty($clientId) && !empty($secret)) {
-            try {
-                $authResponse = Http::asForm()
-                    ->withBasicAuth($clientId, $secret)
-                    ->post("{$baseUrl}/v1/oauth2/token", [
-                        'grant_type' => 'client_credentials',
-                    ]);
-
-                if ($authResponse->successful()) {
-                    $accessToken = $authResponse->json()['access_token'];
-
-                    Http::withToken($accessToken)
-                        ->withHeaders(['Content-Type' => 'application/json'])
-                        ->post("{$baseUrl}/v2/checkout/orders/{$token}/capture");
+                // A customer or PayPal can return to this URL more than once.
+                // A completed payment is the idempotency marker for both capture
+                // and voucher usage.
+                if (! $payment) {
+                    throw new \RuntimeException('Không tìm thấy giao dịch thanh toán của đơn hàng.');
                 }
-            } catch (\Throwable $e) {
-                // Bỏ qua nếu là token giả lập
-            }
+
+                if ($payment->status === 'completed') {
+                    return $lockedOrder->fresh();
+                }
+
+                $voucher = $voucherId
+                    ? Voucher::query()->lockForUpdate()->find($voucherId)
+                    : null;
+
+                if ($voucherId && (! $voucher || (int) $voucher->used_count >= (int) $voucher->usage_limit)) {
+                    throw new \RuntimeException('Mã giảm giá đã hết lượt sử dụng.');
+                }
+
+                // Keep the voucher row locked across the capture so another
+                // callback cannot capture the last voucher usage concurrently.
+                $token = $request->query('token');
+                $this->capturePayPalOrder($token);
+                $payment->update([
+                    'status' => 'completed',
+                    'transaction_id' => $token ?? ('PAYPAL_' . Str::random(10)),
+                    'paid_at' => now(),
+                ]);
+                if ($voucher) {
+                    $voucher->increment('used_count');
+                }
+
+                $lockedOrder->update([
+                    'payment_status' => 'paid',
+                    'order_status' => 'confirmed',
+                    'status' => 'CONFIRMED',
+                ]);
+
+                return $lockedOrder->fresh();
+            });
+        } catch (\Throwable $e) {
+            $this->logTransaction('payment_failed', $order, ['reason' => $e->getMessage()]);
+
+            return redirect()->route('checkout.index')->with('error', 'Không thể xác nhận thanh toán PayPal. Vui lòng thử lại hoặc liên hệ BloomGift.');
         }
 
-        // Cập nhật trạng thái đơn hàng sang ĐÃ THANH TOÁN
-        $order->update([
-            'payment_status' => 'paid',
-            'order_status' => 'confirmed',
-            'status' => 'CONFIRMED',
-        ]);
-
-        Payment::where('order_id', $order->id)->update([
-            'status' => 'completed',
-            'transaction_id' => $token ?? ('PAYPAL_' . Str::random(10)),
-            'paid_at' => now(),
-        ]);
+        Session::forget($this->paypalVoucherSessionKey($order->id));
+        $this->logTransaction('payment_success', $order);
 
         if (\Illuminate\Support\Facades\Route::has('orders.show')) {
             return redirect()->route('orders.show', $order)->with('success', 'Thanh toán PayPal thành công! Đơn hoa #' . $order->order_code . ' đã được thanh toán.');
@@ -444,6 +564,10 @@ class CheckoutController extends Controller
      */
     public function paypalCancel(Request $request)
     {
+        $order = $this->orderOwnedByCurrentCustomer($request->query('order_id'));
+        Session::forget($this->paypalVoucherSessionKey($order->id));
+        $this->logTransaction('payment_cancelled', $order);
+
         return redirect()->route('checkout.index')->with('error', 'Bạn đã hủy quá trình thanh toán qua PayPal.');
     }
 }

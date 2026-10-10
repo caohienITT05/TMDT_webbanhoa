@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\Voucher;
+use App\Support\CheckoutPricing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Validation\Rule;
 
 class VoucherController extends Controller
 {
@@ -63,26 +65,63 @@ class VoucherController extends Controller
     }
 
     /**
-     * Kiểm tra và áp dụng voucher.
+     * @return array{shipping_fee: float, gift_card_fee: float, gift_wrap_fee: float}
+     */
+    private function validatedFees(Request $request): array
+    {
+        $validated = $request->validate([
+            'shipping_fee' => ['nullable', 'numeric', Rule::in(CheckoutPricing::SHIPPING_FEES)],
+            'gift_card_fee' => ['nullable', 'numeric', Rule::in(CheckoutPricing::GIFT_CARD_FEES)],
+            'gift_wrap_fee' => ['nullable', 'numeric', Rule::in(CheckoutPricing::GIFT_WRAP_FEES)],
+        ]);
+
+        return CheckoutPricing::fees($validated);
+    }
+
+    /**
+     * @param  array{shipping_fee: float, gift_card_fee: float, gift_wrap_fee: float}  $fees
+     */
+    private function preview(float $subtotal, array $fees, float $discount): array
+    {
+        return [
+            'subtotal' => $subtotal,
+            'shipping_fee' => $fees['shipping_fee'],
+            'gift_card_fee' => $fees['gift_card_fee'],
+            'gift_wrap_fee' => $fees['gift_wrap_fee'],
+            'service_fee' => $fees['gift_card_fee'] + $fees['gift_wrap_fee'],
+            'discount_amount' => $discount,
+            'total' => CheckoutPricing::total($subtotal, $fees, $discount),
+        ];
+    }
+
+    private function voucherResponse(Request $request, bool $valid, string $message, array $preview = [])
+    {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'valid' => $valid,
+                'message' => $message,
+                ...$preview,
+            ], $valid ? 200 : 422);
+        }
+
+        return back()->with($valid ? 'success' : 'error', $message);
+    }
+
+    /**
+     * Kiểm tra và áp dụng voucher mà không tiêu thụ lượt dùng.
      */
     public function apply(Request $request)
     {
         $checkoutMode = $request->input('checkout_mode') === 'buy_now' ? 'buy_now' : 'cart';
         $voucherKeyPrefix = $checkoutMode === 'buy_now' ? 'buy_now_voucher_' : 'voucher_';
-        $code = strtoupper(trim($request->input('code')));
-        $voucher = \App\Models\Voucher::valid()->where('code', $code)->first();
+        $fees = $this->validatedFees($request);
 
-        if (!$voucher) {
-            return back()->with('error', 'Mã giảm giá không tồn tại, đã hết hạn hoặc chưa tới khung giờ áp dụng!');
-        }
-
-        // Tính đúng subtotal của mode hiện tại; Buy Now không lấy dữ liệu từ cart_items.
         if ($checkoutMode === 'buy_now') {
             $quantity = (int) $request->input('buy_now_quantity', Session::get('buy_now.quantity', 0));
             $subtotal = $this->getBuyNowSubtotal($quantity);
 
             if ($subtotal <= 0) {
-                return back()->with('error', 'Sản phẩm hoặc số lượng đặt hàng không còn hợp lệ.');
+                return $this->voucherResponse($request, false, 'Sản phẩm hoặc số lượng đặt hàng không còn hợp lệ.', $this->preview(0, $fees, 0));
             }
 
             Session::put('buy_now', [
@@ -92,17 +131,30 @@ class VoucherController extends Controller
         } else {
             $subtotal = $this->getCartSubtotal();
         }
-        if ($subtotal < $voucher->min_order_amount) {
-            return back()->with('error', 'Đơn hàng cần đạt tối thiểu ' . number_format($voucher->min_order_amount) . 'đ để dùng mã này.');
+
+        $code = strtoupper(trim((string) $request->input('code')));
+        $voucher = Voucher::valid()->where('code', $code)->first();
+
+        if (! $voucher) {
+            return $this->voucherResponse($request, false, 'Mã giảm giá không tồn tại, đã hết hạn hoặc chưa tới khung giờ áp dụng!', $this->preview($subtotal, $fees, 0));
         }
 
-        $discount = $voucher->calculateDiscount($subtotal);
+        if ($subtotal < (float) $voucher->min_order_amount) {
+            return $this->voucherResponse($request, false, 'Đơn hàng cần đạt tối thiểu ' . number_format($voucher->min_order_amount) . 'đ để dùng mã này.', $this->preview($subtotal, $fees, 0));
+        }
 
-        session()->put($voucherKeyPrefix . 'id', $voucher->id);
-        session()->put($voucherKeyPrefix . 'code', $voucher->code);
-        session()->put($voucherKeyPrefix . 'discount', $discount);
+        $discount = (float) $voucher->calculateDiscount($subtotal);
 
-        return back()->with('success', 'Đã áp dụng mã ' . $voucher->code . ' (Giảm ' . number_format($discount) . 'đ)');
+        Session::put($voucherKeyPrefix . 'id', $voucher->id);
+        Session::put($voucherKeyPrefix . 'code', $voucher->code);
+        Session::put($voucherKeyPrefix . 'discount', $discount);
+
+        return $this->voucherResponse(
+            $request,
+            true,
+            'Đã áp dụng mã ' . $voucher->code . ' (Giảm ' . number_format($discount) . 'đ).',
+            ['voucher_code' => $voucher->code, ...$this->preview($subtotal, $fees, $discount)],
+        );
     }
     /**
      * Hủy voucher đang áp dụng.
@@ -110,6 +162,21 @@ class VoucherController extends Controller
     public function remove(Request $request)
     {
         $voucherKeyPrefix = $request->input('checkout_mode') === 'buy_now' ? 'buy_now_voucher_' : 'voucher_';
+
+        if ($request->expectsJson()) {
+            $fees = $this->validatedFees($request);
+            $subtotal = $request->input('checkout_mode') === 'buy_now'
+                ? $this->getBuyNowSubtotal((int) $request->input('buy_now_quantity', Session::get('buy_now.quantity', 0)))
+                : $this->getCartSubtotal();
+
+            Session::forget([
+                $voucherKeyPrefix . 'id',
+                $voucherKeyPrefix . 'code',
+                $voucherKeyPrefix . 'discount',
+            ]);
+
+            return $this->voucherResponse($request, true, 'Đã hủy mã giảm giá.', $this->preview($subtotal, $fees, 0));
+        }
 
         Session::forget([
             $voucherKeyPrefix . 'id',

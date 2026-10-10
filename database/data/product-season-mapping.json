@@ -1,0 +1,232 @@
+[
+  {
+    "slug": "bo-hoa-hong-do-ecua-dor",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "ke-hoa-khai-truong-phat-tai",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "gio-hoa-huong-duong-nang-som",
+    "season": "summer",
+    "reason": "Loài hoa nở đẹp và phù hợp mùa hạ"
+  },
+  {
+    "slug": "bo-hoa-hong-hien-cao",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "hoa-tulip",
+    "season": "spring",
+    "reason": "Hoa hoặc dịp nổi bật phù hợp mùa xuân"
+  },
+  {
+    "slug": "bo-hoa-baby-trang-tinh-khoi",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "bo-cuc-hoa-mi-diu-dang",
+    "season": "autumn",
+    "reason": "Loài hoa, tông màu hoặc dịp phù hợp mùa thu"
+  },
+  {
+    "slug": "gio-hoa-do-sang-trong",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "bo-hoa-hong-kem-thanh-nha",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "set-qua-hong-pastel-yeu-thuong",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "bo-hong-do-eternal-love",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "bo-hong-phan-diu-em",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "bo-hong-trang-thuan-khiet",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "tulip-hong-ban-mai",
+    "season": "spring",
+    "reason": "Hoa hoặc dịp nổi bật phù hợp mùa xuân"
+  },
+  {
+    "slug": "tulip-vang-nang-moi",
+    "season": "spring",
+    "reason": "Hoa hoặc dịp nổi bật phù hợp mùa xuân"
+  },
+  {
+    "slug": "tulip-tim-mong-mo",
+    "season": "spring",
+    "reason": "Hoa hoặc dịp nổi bật phù hợp mùa xuân"
+  },
+  {
+    "slug": "huong-duong-sunny-day",
+    "season": "summer",
+    "reason": "Loài hoa nở đẹp và phù hợp mùa hạ"
+  },
+  {
+    "slug": "baby-trang-may-nho",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "baby-hong-keo-ngot",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "cam-tu-cau-bien-xanh",
+    "season": "summer",
+    "reason": "Loài hoa nở đẹp và phù hợp mùa hạ"
+  },
+  {
+    "slug": "cam-tu-cau-tim-chieu",
+    "season": "summer",
+    "reason": "Loài hoa nở đẹp và phù hợp mùa hạ"
+  },
+  {
+    "slug": "mau-don-hong-ngoc",
+    "season": "spring",
+    "reason": "Hoa hoặc dịp nổi bật phù hợp mùa xuân"
+  },
+  {
+    "slug": "lily-trang-thanh-tao",
+    "season": "winter",
+    "reason": "Dòng hoa phù hợp mùa đông và thời tiết mát"
+  },
+  {
+    "slug": "lily-hong-rang-ro",
+    "season": "winter",
+    "reason": "Dòng hoa phù hợp mùa đông và thời tiết mát"
+  },
+  {
+    "slug": "bo-hoa-pastel-harmony",
+    "season": "spring",
+    "reason": "Hoa hoặc dịp nổi bật phù hợp mùa xuân"
+  },
+  {
+    "slug": "cuc-hoa-mi-an-nhien",
+    "season": "autumn",
+    "reason": "Loài hoa, tông màu hoặc dịp phù hợp mùa thu"
+  },
+  {
+    "slug": "cam-chuong-tri-an",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "cat-tuong-thanh-xuan",
+    "season": "summer",
+    "reason": "Loài hoa nở đẹp và phù hợp mùa hạ"
+  },
+  {
+    "slug": "gio-hoa-sinh-nhat-hong",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "gio-hoa-sunshine",
+    "season": "summer",
+    "reason": "Loài hoa nở đẹp và phù hợp mùa hạ"
+  },
+  {
+    "slug": "hop-hoa-trai-tim-do",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "hop-hoa-luxury-ivory",
+    "season": "winter",
+    "reason": "Dòng hoa phù hợp mùa đông và thời tiết mát"
+  },
+  {
+    "slug": "gio-hoa-chuc-mung",
+    "season": "autumn",
+    "reason": "Loài hoa, tông màu hoặc dịp phù hợp mùa thu"
+  },
+  {
+    "slug": "hop-hoa-garden-pastel",
+    "season": "spring",
+    "reason": "Hoa hoặc dịp nổi bật phù hợp mùa xuân"
+  },
+  {
+    "slug": "chocolate-sweet-moments",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "gau-bong-teddy-hug",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "nen-thom-amber-glow",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "gift-box-tra-nen",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "set-thiep-floral-notes",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "set-qua-hong-chocolate",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "valentine-dam-say",
+    "season": "spring",
+    "reason": "Hoa hoặc dịp nổi bật phù hợp mùa xuân"
+  },
+  {
+    "slug": "8-thang-3-ruc-ro",
+    "season": "spring",
+    "reason": "Hoa hoặc dịp nổi bật phù hợp mùa xuân"
+  },
+  {
+    "slug": "20-thang-10-yeu-thuong",
+    "season": "autumn",
+    "reason": "Loài hoa, tông màu hoặc dịp phù hợp mùa thu"
+  },
+  {
+    "slug": "ngay-cua-me-diu-dang",
+    "season": "spring",
+    "reason": "Hoa hoặc dịp nổi bật phù hợp mùa xuân"
+  },
+  {
+    "slug": "ky-niem-golden-love",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  },
+  {
+    "slug": "cam-on-little-joy",
+    "season": "all",
+    "reason": "Hoa phổ biến hoặc quà tặng phù hợp quanh năm"
+  }
+]

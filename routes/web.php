@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\VoucherController as AdminVoucherController;
 use App\Http\Controllers\PolicyController;
+use App\Http\Controllers\SitemapController;
 
 // 1. Controllers Quản trị (TV1 & TV4)
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\BuyNowController;
 use App\Http\Controllers\VoucherController;
 use App\Http\Controllers\GiftController;
+use App\Http\Controllers\GiftAdvisorController;
 use App\Http\Controllers\ShippingController;
 
 // 3. Controllers Đặt hàng & Thanh toán PayPal (TV4)
@@ -31,8 +33,6 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 
 /*
@@ -45,12 +45,21 @@ use Illuminate\Support\Facades\DB;
 Route::get('/', function () {
     $products = Product::where('is_active', true)->latest()->take(8)->get();
     $categories = Category::all();
+
     return view('Customer.home', compact('products', 'categories'));
 })->name('home');
 
 // Danh mục hoa
 Route::get('/danh-muc', function () {
-    $categories = Category::withCount('products')->get();
+    $categories = Category::query()
+        ->whereNull('parent_id')
+        ->with([
+            'children' => fn ($query) => $query->withCount('products')->orderBy('name'),
+        ])
+        ->withCount('products')
+        ->orderBy('name')
+        ->get();
+
     return view('Customer.categories', compact('categories'));
 })->name('categories');
 
@@ -59,9 +68,9 @@ Route::get('/danh-muc-hoa', function () {
 })->name('categories.index');
 
 Route::get('/danh-muc/{slug}', function ($slug) {
-    $category = Category::where('slug', $slug)->firstOrFail();
+    $category = Category::with('children')->where('slug', $slug)->firstOrFail();
     $products = Product::where('category_id', $category->id)->where('is_active', true)->paginate(12);
-    $categories = Category::all();
+    $categories = Category::with('parent')->orderBy('parent_id')->orderBy('name')->get();
     return view('Customer.products', compact('products', 'categories', 'category'));
 })->name('categories.show');
 
@@ -77,8 +86,35 @@ Route::get('/san-pham', function () {
         $query->where('name', 'like', '%' . request('search') . '%');
     }
 
+    if (is_numeric(request('min_price'))) {
+        $query->where('price', '>=', max(0, (float) request('min_price')));
+    }
+
+    if (is_numeric(request('max_price'))) {
+        $query->where('price', '<=', max(0, (float) request('max_price')));
+    }
+
+    if (in_array(request('season'), Product::SEASONS, true)) {
+        $query->season(request('season'));
+    }
+
+    if (request()->boolean('in_stock')) {
+        $query->where('stock', '>', 0);
+    }
+
+    if (request()->boolean('sale')) {
+        $query->whereNotNull('sale_price')->whereColumn('sale_price', '<', 'price');
+    }
+
+    match (request('sort')) {
+        'price_asc' => $query->orderBy('price'),
+        'price_desc' => $query->orderByDesc('price'),
+        'newest' => $query->latest(),
+        default => $query->orderBy('id'),
+    };
+
     $products = $query->paginate(12)->withQueryString();
-    $categories = Category::all();
+    $categories = Category::with('parent')->orderBy('parent_id')->orderBy('name')->get();
     return view('Customer.products', compact('products', 'categories'));
 })->name('products.index');
 
@@ -179,6 +215,7 @@ Route::post('/mua-ngay/{product}', [BuyNowController::class, 'start'])->name('bu
 
 Route::post('/voucher/apply', [VoucherController::class, 'apply'])->name('voucher.apply');
 Route::any('/voucher/remove', [VoucherController::class, 'remove'])->name('voucher.remove');
+Route::post('/tro-ly-chon-hoa-qua/goi-y', [GiftAdvisorController::class, 'suggest'])->name('gift-advisor.suggest');
 Route::post('/gift/save', [GiftController::class, 'save'])->name('gift.save');
 Route::any('/gift/remove', [GiftController::class, 'remove'])->name('gift.remove');
 Route::post('/shipping/calculate', [ShippingController::class, 'calculate'])->name('shipping.calculate');
@@ -309,117 +346,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 Route::get('/dieu-khoan-giao-dich', [PolicyController::class, 'terms'])->name('policies.terms');
 Route::get('/chinh-sach-doi-tra', [PolicyController::class, 'returns'])->name('policies.returns');
 Route::get('/chinh-sach-bao-mat', [PolicyController::class, 'privacy'])->name('policies.privacy');
-
-Route::get('/fix-db', function () {
-    Schema::table('delivery_slots', function (Blueprint $table) {
-        if (!Schema::hasColumn('delivery_slots', 'name')) {
-            $table->string('name')->nullable()->after('id');
-        }
-        if (!Schema::hasColumn('delivery_slots', 'is_active')) {
-            $table->boolean('is_active')->default(true);
-        }
-        if (!Schema::hasColumn('delivery_slots', 'start_time')) {
-            $table->time('start_time')->nullable();
-        }
-        if (!Schema::hasColumn('delivery_slots', 'end_time')) {
-            $table->time('end_time')->nullable();
-        }
-        if (!Schema::hasColumn('delivery_slots', 'max_orders')) {
-            $table->integer('max_orders')->default(20);
-        }
-    });
-
-    // 1. Thêm toàn bộ các cột thanh toán còn thiếu vào bảng orders
-    Schema::table('orders', function (Blueprint $table) {
-        if (!Schema::hasColumn('orders', 'order_code'))
-            $table->string('order_code')->nullable()->after('id');
-        if (!Schema::hasColumn('orders', 'recipient_name'))
-            $table->string('recipient_name')->nullable();
-        if (!Schema::hasColumn('orders', 'recipient_phone'))
-            $table->string('recipient_phone')->nullable();
-        if (!Schema::hasColumn('orders', 'recipient_address'))
-            $table->text('recipient_address')->nullable();
-        if (!Schema::hasColumn('orders', 'delivery_date'))
-            $table->date('delivery_date')->nullable();
-        if (!Schema::hasColumn('orders', 'delivery_slot_id'))
-            $table->unsignedBigInteger('delivery_slot_id')->nullable();
-        if (!Schema::hasColumn('orders', 'subtotal'))
-            $table->decimal('subtotal', 15, 2)->default(0);
-        if (!Schema::hasColumn('orders', 'discount'))
-            $table->decimal('discount', 15, 2)->default(0);
-        if (!Schema::hasColumn('orders', 'shipping_fee'))
-            $table->decimal('shipping_fee', 15, 2)->default(0);
-        if (!Schema::hasColumn('orders', 'total'))
-            $table->decimal('total', 15, 2)->default(0);
-        if (!Schema::hasColumn('orders', 'payment_method'))
-            $table->string('payment_method')->default('cod');
-        if (!Schema::hasColumn('orders', 'payment_status'))
-            $table->string('payment_status')->default('pending');
-        if (!Schema::hasColumn('orders', 'order_status'))
-            $table->string('order_status')->default('pending');
-        if (!Schema::hasColumn('orders', 'note'))
-            $table->text('note')->nullable();
-    });
-
-    // Cấu hình tương thích các cột cũ của TV1 để không bị lỗi bắt buộc nhập
-    try {
-        DB::statement("ALTER TABLE orders MODIFY status VARCHAR(50) DEFAULT 'PENDING' NULL");
-        DB::statement("ALTER TABLE orders MODIFY total_amount DECIMAL(15,2) DEFAULT 0 NULL");
-        DB::statement("ALTER TABLE orders MODIFY user_id BIGINT UNSIGNED NULL");
-    } catch (\Throwable $e) {
-    }
-
-    // 2. Thêm các cột còn thiếu vào bảng chi tiết đơn hàng order_items
-    Schema::table('order_items', function (Blueprint $table) {
-        if (!Schema::hasColumn('order_items', 'product_name'))
-            $table->string('product_name')->nullable()->after('product_id');
-        if (!Schema::hasColumn('order_items', 'price'))
-            $table->decimal('price', 15, 2)->default(0);
-        if (!Schema::hasColumn('order_items', 'quantity'))
-            $table->unsignedInteger('quantity')->default(1);
-        if (!Schema::hasColumn('order_items', 'subtotal'))
-            $table->decimal('subtotal', 15, 2)->default(0);
-    });
-
-    try {
-        DB::statement("ALTER TABLE order_items MODIFY total DECIMAL(15,2) DEFAULT 0 NULL");
-    } catch (\Throwable $e) {
-    }
-
-    // 3. Tạo bảng lưu giao dịch thanh toán payments nếu chưa có
-    if (!Schema::hasTable('payments')) {
-        Schema::create('payments', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
-            $table->string('payment_method')->default('paypal');
-            $table->string('transaction_id')->nullable();
-            $table->decimal('amount', 15, 2)->default(0);
-            $table->string('currency', 10)->default('VND');
-            $table->string('status')->default('pending');
-            $table->json('payload')->nullable();
-            $table->timestamps();
-        });
-    }
-
-    // 4. Đồng bộ bảng migrations để artisan migrate không bao giờ báo lỗi trùng bảng
-    $migrations = [
-        '2026_09_07_041814_create_delivery_slots_table',
-        '2026_09_07_041815_create_orders_table',
-        '2026_09_07_041816_create_order_items_table',
-        '2026_09_07_041819_create_payments_table',
-    ];
-    $batch = (DB::table('migrations')->max('batch') ?? 0) + 1;
-    foreach ($migrations as $m) {
-        if (!DB::table('migrations')->where('migration', $m)->exists()) {
-            DB::table('migrations')->insert(['migration' => $m, 'batch' => $batch]);
-        }
-    }
-
-    return "<div style='font-family: sans-serif; text-align: center; margin-top: 60px;'>
-        <h1 style='color: #16a34a;'>🎉 ĐÃ ĐỒNG BỘ CSDL THÀNH CÔNG 100%!</h1>
-        <p style='color: #475569; font-size: 18px;'>Tất cả các cột checkout và thanh toán đã sẵn sàng.</p>
-        <a href='/checkout' style='display: inline-block; padding: 10px 24px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold;'>Quay lại trang Checkout để Đặt Hàng</a>
-    </div>";
-});
+Route::get('/sitemap.xml', [SitemapController::class, 'sitemap'])->name('sitemap');
+Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 
 require __DIR__ . '/auth.php';
+require __DIR__ . '/finance.php';

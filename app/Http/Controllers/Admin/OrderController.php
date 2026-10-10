@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Services\FinanceAnalyticsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -47,8 +49,9 @@ class OrderController extends Controller
     /**
      * Cập nhật trạng thái đơn hàng và đồng bộ doanh thu.
      */
-    public function updateStatus(Request $request, Order $order)
+    public function updateStatus(Request $request, Order $order, FinanceAnalyticsService $finance)
     {
+        $oldStatus = strtolower((string) ($order->order_status ?: $order->status));
         // Chấp nhận cả giá trị gửi lên từ trường status hoặc order_status
         $inputStatus = $request->input('status') ?? $request->input('order_status');
 
@@ -82,6 +85,22 @@ class OrderController extends Controller
         }
 
         $order->update($updateData);
+
+        if ($oldStatus !== 'completed' && $statusLower === 'completed') {
+            $finance->finalizeOrderFinancials($order->fresh());
+        }
+
+        if ($oldStatus !== $statusLower) {
+            Log::channel('transactions')->info('order_status_changed', [
+                'order_id' => $order->id,
+                'order_code' => $order->order_code,
+                'user_id' => $order->user_id,
+                'payment_method' => $order->payment_method,
+                'amount' => (float) $order->total,
+                'from_status' => $oldStatus,
+                'to_status' => $statusLower,
+            ]);
+        }
 
         return redirect()
             ->back()

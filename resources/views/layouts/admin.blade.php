@@ -38,7 +38,6 @@
 
                 <!-- Navigation Links -->
                 <nav class="space-y-1.5 text-xs font-medium">
-
                     <!-- 1. Trang chủ / Bảng điều khiển -->
                     <a href="{{ route('admin.dashboard') }}"
                         class="flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group {{ request()->routeIs('admin.dashboard') ? 'font-bold shadow-md' : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]' }}"
@@ -202,6 +201,26 @@
                             </svg>
                         @endif
                     </a>
+
+                    <!-- 9. Báo cáo tài chính -->
+                    <div class="mt-3 border-t border-gray-800/80 pt-3">
+                        <p class="mb-1.5 px-4 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-600">Báo cáo</p>
+                        <a href="{{ route('admin.finance.index') }}"
+                            class="flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group {{ request()->routeIs('admin.finance.*') ? 'font-bold shadow-md' : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]' }}"
+                            style="{{ request()->routeIs('admin.finance.*') ? 'background: linear-gradient(90deg, #fbcfe8 0%, #ffd7e2 100%); color: #1e1b24;' : '' }}">
+                            <div class="flex items-center gap-3">
+                                <svg class="w-4 h-4 {{ request()->routeIs('admin.finance.*') ? 'text-gray-900' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 19V9m5 10V5m5 14v-7m5 7V3M3 19h18" />
+                                </svg>
+                                <span>Tài chính & Lợi nhuận</span>
+                            </div>
+                            @if(!request()->routeIs('admin.finance.*'))
+                                <svg class="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                </svg>
+                            @endif
+                        </a>
+                    </div>
 
                 </nav>
             </div>

@@ -30,12 +30,32 @@
                 </div>
 
                 <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Mùa vụ <span class="text-red-500">*</span></label>
+                    <select name="season" required class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm bg-white">
+                        @foreach(['all'=>'🌿 Quanh năm','spring'=>'🌸 Mùa xuân','summer'=>'☀️ Mùa hạ','autumn'=>'🍂 Mùa thu','winter'=>'❄️ Mùa đông'] as $value=>$label)
+                            <option value="{{ $value }}" @selected(old('season', $product->season) === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    @error('season') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                </div>
+
+                <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Giá bán gốc (VNĐ) <span
                             class="text-red-500">*</span></label>
                     <input type="number" name="price" value="{{ old('price', $product->price) }}" required min="0"
                         step="1000" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm">
                 </div>
 
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Giá vốn thực tế (VNĐ, chưa biết thì để trống)</label>
+                    <input type="number" name="cost_price" value="{{ old('cost_price', $product->cost_price) }}" min="0" step="0.01" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm">
+                    @error('cost_price') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Lý do đổi giá vốn</label>
+                    <input type="text" name="cost_change_reason" value="{{ old('cost_change_reason') }}" maxlength="1000" placeholder="Ví dụ: Phiếu nhập hàng ngày 05/10/2026" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm">
+                    @error('cost_change_reason') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Giá khuyến mãi (VNĐ)</label>
                     <input type="number" name="sale_price" value="{{ old('sale_price', $product->sale_price) }}" min="0"
@@ -76,5 +96,21 @@
                 <x-admin.button type="submit" variant="primary">Cập nhật sản phẩm</x-admin.button>
             </div>
         </form>
+
+        <div class="mt-8 border-t border-gray-100 pt-6">
+            <h3 class="mb-3 text-base font-bold text-gray-900">Lịch sử thay đổi giá vốn</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead><tr><th class="py-2">Thời điểm</th><th>Giá cũ</th><th>Giá mới</th><th>Người thay đổi</th><th>Lý do</th></tr></thead>
+                    <tbody>
+                    @forelse($product->costHistories as $history)
+                        <tr class="border-t"><td class="py-2">{{ $history->effective_at->format('d/m/Y H:i') }}</td><td>{{ $history->old_cost_price === null ? 'Chưa có' : number_format($history->old_cost_price, 0, ',', '.').' đ' }}</td><td>{{ number_format($history->new_cost_price, 0, ',', '.') }} đ</td><td>{{ $history->changedBy?->name ?? 'Hệ thống' }}</td><td>{{ $history->reason ?: '—' }}</td></tr>
+                    @empty
+                        <tr><td colspan="5" class="py-3 text-gray-500">Chưa có lần thay đổi giá vốn nào.</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 @endsection

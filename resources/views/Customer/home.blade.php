@@ -1,4 +1,4 @@
-<x-customer.layout title="Hoa tươi & quà tặng">
+<x-customer.layout title="Hoa tươi & quà tặng" description="BloomGift cung cấp hoa tươi và quà tặng để bạn gửi lời yêu thương trong những dịp đáng nhớ.">
     @php
         $categoryImages = [
             'images/Categories/hoa-sinh-nhat.jpg',
@@ -33,6 +33,8 @@
             </div>
         </div>
     </section>
+
+    <x-customer.gift-advisor />
 
     <section class="bloom-section bloom-shell">
         <div class="flex flex-wrap items-end justify-between gap-4">
