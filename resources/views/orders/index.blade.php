@@ -250,7 +250,7 @@
 
                     <div class="date">
                         Ngày đặt:
-                        {{ $order->created_at->format('d/m/Y H:i') }}
+                        {{ $order->created_at_local->format('d/m/Y H:i') }}
                     </div>
 
                     <div style="margin-top:12px;">

@@ -202,6 +202,10 @@
                         @endif
                     </a>
 
+                    <a href="{{ route('admin.reviews.index') }}" class="flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group {{ request()->routeIs('admin.reviews.*') ? 'font-bold shadow-md' : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.05]' }}" style="{{ request()->routeIs('admin.reviews.*') ? 'background: linear-gradient(90deg, #fbcfe8 0%, #ffd7e2 100%); color: #1e1b24;' : '' }}">
+                        <span>Kiểm duyệt đánh giá</span><span class="text-gray-500">★</span>
+                    </a>
+
                     <!-- 9. Báo cáo tài chính -->
                     <div class="mt-3 border-t border-gray-800/80 pt-3">
                         <p class="mb-1.5 px-4 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-600">Báo cáo</p>

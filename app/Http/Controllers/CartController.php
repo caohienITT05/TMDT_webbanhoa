@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CartItem;
 use App\Models\Product;
+use App\Support\GuestCartSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -29,7 +30,7 @@ class CartController extends Controller
             return $query->where('user_id', Auth::id());
         }
 
-        return $query->where('session_id', Session::getId());
+        return $query->where('session_id', GuestCartSession::id());
     }
 
     /**
@@ -163,7 +164,7 @@ class CartController extends Controller
         } else {
             CartItem::create([
                 'user_id' => Auth::id(),
-                'session_id' => Auth::check() ? null : Session::getId(),
+                'session_id' => Auth::check() ? null : GuestCartSession::id(),
                 'product_id' => $product->id,
                 'quantity' => $quantity,
                 'price' => $price,

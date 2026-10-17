@@ -32,8 +32,14 @@
         <div class="rounded-lg bg-gray-50 p-4"><p class="text-xs text-gray-500">Nguồn số liệu</p><p class="mt-1 font-bold">Dữ liệu quản trị trong hệ thống</p></div>
     </div>
     <div class="mt-4 rounded-lg bg-blue-50 p-4 text-sm text-blue-950">
-        <strong>Giả định demo:</strong> doanh nghiệp độc lập; không phải công ty con thuộc trường hợp bị loại trừ; không có quan hệ liên kết làm mất điều kiện; không kinh doanh ngành chịu thuế TNDN đặc biệt; không khai thác dầu khí hoặc tài nguyên; được áp dụng quy định doanh nghiệp thông thường.
+        <strong>Giả định hồ sơ demo:</strong> doanh nghiệp Việt Nam và B2C. Điều kiện chia/tách để xét giảm 30% chưa được mặc định; quản trị viên cần xác nhận ở biểu mẫu bên dưới. Các ưu đãi khác vẫn cần đối chiếu hồ sơ pháp lý.
     </div>
+    <form method="POST" action="{{ route('admin.finance.tax-eligibility.save') }}" class="mt-4 grid gap-3 rounded-lg border p-4 md:grid-cols-[1fr_auto]">@csrf
+        <label class="text-sm font-medium">Tình trạng doanh nghiệp có được hình thành do chia/tách thuộc trường hợp bị loại trừ?
+            <select name="split_status" class="mt-1 block w-full rounded-lg border-gray-300"><option value="unknown" @selected(($profile->is_split_from_large_enterprise ?? null) === null)>Chưa xác minh</option><option value="not_split" @selected(($profile->is_split_from_large_enterprise ?? null) === false || ($profile->is_split_from_large_enterprise ?? null) === 0)>Không thuộc trường hợp này</option><option value="split" @selected(($profile->is_split_from_large_enterprise ?? null) === true || ($profile->is_split_from_large_enterprise ?? null) === 1)>Có thuộc trường hợp này</option></select>
+        </label><button class="self-end rounded-lg bg-rose-600 px-4 py-2 text-white">Lưu tình trạng</button>
+        <p class="text-xs text-gray-600 md:col-span-2">Chỉ đánh giá giảm 30% khi doanh thu năm không quá 10 tỷ đồng và tình trạng chia/tách đã được xác nhận. Chưa xác minh thì không tự áp dụng ưu đãi.</p>
+    </form>
     @else
     <p class="mt-4 rounded-lg bg-amber-50 p-4 text-amber-900">Chưa cấu hình hồ sơ pháp lý cho cửa hàng.</p>
     @endif
@@ -46,8 +52,9 @@
         <div class="rounded-lg bg-gray-50 p-4"><p class="text-xs text-gray-500">Doanh thu dự kiến năm</p><p class="mt-1 text-lg font-bold">{{ $money($cit['projected_revenue']) }}</p><p class="mt-1 text-xs text-gray-500">Chưa nhập kế hoạch riêng nên đang dùng dữ liệu đã ghi nhận</p></div>
         <div class="rounded-lg bg-gray-50 p-4"><p class="text-xs text-gray-500">Doanh thu quyết toán năm</p><p class="mt-1 text-lg font-bold">{{ $cit['actual_revenue'] === null ? 'Chưa quyết toán' : $money($cit['actual_revenue']) }}</p></div>
         <div class="rounded-lg bg-gray-50 p-4"><p class="text-xs text-gray-500">Doanh thu năm trước liền kề</p><p class="mt-1 text-lg font-bold">{{ $cit['prior_year_revenue'] === null ? 'Không áp dụng cho hồ sơ mới' : $money($cit['prior_year_revenue']) }}</p></div>
+        <div class="rounded-lg bg-blue-50 p-4 text-blue-950"><p class="text-xs text-blue-700">Giảm 30% CIT theo Nghị quyết 43</p><p class="mt-1 text-lg font-bold">{{ $cit['cit_reduction_percent'] ? 'Đủ điều kiện dự kiến' : (['needs_confirmation'=>'Chờ xác minh chia/tách','excluded_split'=>'Thuộc trường hợp loại trừ','over_revenue_limit'=>'Doanh thu vượt 10 tỷ','not_applicable'=>'Không thuộc kỳ áp dụng'][$cit['cit_reduction_status']] ?? 'Chưa đủ dữ liệu') }}</p><p class="mt-1 text-xs text-blue-800">Tính trên thuế sau ưu đãi khác, cho kỳ 2026–2027 nếu doanh thu năm không quá 10 tỷ đồng.</p></div>
         <div class="rounded-lg bg-green-50 p-4 text-green-900"><p class="text-xs text-green-700">Trạng thái thuế</p><p class="mt-1 text-lg font-bold">{{ $cit['status_label'] }}</p><p class="mt-1 text-xs text-green-700">{{ $cit['reason'] }}</p></div>
-        <div class="rounded-lg bg-gray-50 p-4"><p class="text-xs text-gray-500">Mức áp dụng nếu thuộc diện chịu thuế</p><p class="mt-1 text-lg font-bold">{{ number_format($cit['applicable_rate'], 0, ',', '.') }}%</p><p class="mt-1 text-xs text-gray-500">Miễn thuế là trạng thái riêng, không phải thuế suất 0%</p></div>
+        <div class="rounded-lg bg-gray-50 p-4"><p class="text-xs text-gray-500">Mức áp dụng nếu thuộc diện chịu thuế</p><p class="mt-1 text-lg font-bold">{{ $cit['applicable_rate'] === null ? 'Chưa xác định' : number_format($cit['applicable_rate'], 0, ',', '.') . '%' }}</p><p class="mt-1 text-xs text-gray-500">Miễn thuế là trạng thái riêng, không phải thuế suất 0%</p></div>
         <div class="rounded-lg bg-gray-50 p-4"><p class="text-xs text-gray-500">Thu nhập tính thuế dự kiến</p><p class="mt-1 text-lg font-bold">{{ $moneyCents($financial['profit_before_tax']) }}</p><p class="mt-1 text-xs text-gray-500">Số quản trị trước điều chỉnh quyết toán</p></div>
         <div class="rounded-lg bg-rose-50 p-4 text-rose-900"><p class="text-xs text-rose-700">Thuế TNDN dự tính</p><p class="mt-1 text-lg font-bold">{{ $moneyCents($financial['estimated_tax']) }}</p><p class="mt-1 text-xs text-rose-700">Thuế thực tế: {{ $moneyCents($financial['actual_tax']) }}</p></div>
     </div>
@@ -63,10 +70,11 @@
     <div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="text-lg font-bold">Thuế giá trị gia tăng (VAT)</h2><p class="mt-1 text-sm text-gray-600">VAT được báo cáo riêng và không bị trừ trực tiếp khỏi lợi nhuận sau thuế TNDN.</p></div><span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800">VAT đầu ra tham khảo</span></div>
     <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <div class="rounded-lg bg-gray-50 p-4"><p class="text-xs text-gray-500">Phương pháp giá</p><p class="mt-1 font-bold">{{ $profile?->prices_include_vat ? 'Giá đã bao gồm VAT' : 'Giá chưa bao gồm VAT' }}</p><p class="mt-1 text-xs text-gray-500">{{ $profile?->prices_include_vat ? 'Công thức mặc định: doanh thu × thuế suất / (100 + thuế suất)' : 'Công thức mặc định: doanh thu × thuế suất' }}</p></div>
-        <div class="rounded-lg bg-gray-50 p-4"><p class="text-xs text-gray-500">Thuế suất mặc định demo</p><p class="mt-1 text-lg font-bold">{{ number_format((float) ($profile?->default_vat_rate ?? 0), 0, ',', '.') }}%</p><p class="mt-1 text-xs text-gray-500">Chỉ dùng cho sản phẩm chưa phân loại</p></div>
+        <div class="rounded-lg bg-gray-50 p-4"><p class="text-xs text-gray-500">Thuế suất mặc định demo</p><p class="mt-1 text-lg font-bold">{{ $profile ? number_format((float) $profile->default_vat_rate, 0, ',', '.') . '%' : 'Chưa cấu hình' }}</p><p class="mt-1 text-xs text-gray-500">Không tự dùng để tính VAT của sản phẩm chưa phân loại</p></div>
         <div class="rounded-lg bg-gray-50 p-4"><p class="text-xs text-gray-500">Doanh thu tính VAT trong kỳ</p><p class="mt-1 text-lg font-bold">{{ $moneyCents($financial['estimated_indirect_tax_base']) }}</p><p class="mt-1 text-xs text-gray-500">Từ {{ $displayDate($compliance['period_from']) }} đến {{ $displayDate($compliance['period_to']) }}</p></div>
         <div class="rounded-lg bg-blue-50 p-4 text-blue-900"><p class="text-xs text-blue-700">VAT đầu ra dự tính</p><p class="mt-1 text-lg font-bold">{{ $moneyCents($financial['estimated_indirect_tax']) }}</p><p class="mt-1 text-xs text-blue-700">Chưa trừ VAT đầu vào</p></div>
-        <div class="rounded-lg bg-amber-50 p-4 text-amber-900"><p class="text-xs text-amber-700">Sản phẩm chưa phân loại thuế</p><p class="mt-1 text-lg font-bold">{{ $compliance['unclassified_products'] }}/{{ $compliance['unclassified_products'] + $compliance['mapped_products'] }}</p><p class="mt-1 text-xs text-amber-700">Đang dùng mức mặc định demo, không khẳng định toàn bộ danh mục chịu 8%</p></div>
+        <div class="rounded-lg bg-amber-50 p-4 text-amber-900"><p class="text-xs text-amber-700">Sản phẩm chưa phân loại thuế</p><p class="mt-1 text-lg font-bold">{{ $compliance['unclassified_products'] }}/{{ $compliance['unclassified_products'] + $compliance['mapped_products'] }}</p><p class="mt-1 text-xs text-amber-700">VAT của phần chưa phân loại được hiển thị là thiếu dữ liệu, không tự gán mức thuế.</p></div>
+        <div class="rounded-lg bg-amber-50 p-4 text-amber-900"><p class="text-xs text-amber-700">Doanh thu chưa đủ phân loại VAT</p><p class="mt-1 text-lg font-bold">{{ $moneyCents($financial['unclassified_indirect_tax_base']) }}</p><p class="mt-1 text-xs text-amber-700">Gồm sản phẩm chưa mapping và khoản giao hàng cần xác định cách xử lý.</p></div>
         <div class="rounded-lg bg-gray-50 p-4"><p class="text-xs text-gray-500">Sản phẩm đã phân loại</p><p class="mt-1 text-lg font-bold">{{ $compliance['mapped_products'] }}</p><p class="mt-1 text-xs text-gray-500">Hỗ trợ không chịu thuế, 0%, 5%, 8%, 10% và tùy chỉnh</p></div>
         <div class="rounded-lg bg-gray-50 p-4"><p class="text-xs text-gray-500">Ngày hiệu lực chính sách giảm VAT</p><p class="mt-1 font-bold">01/07/2025 – 31/12/2026</p></div>
         <div class="rounded-lg bg-gray-50 p-4"><p class="text-xs text-gray-500">VAT thực tế đã xác nhận</p><p class="mt-1 text-lg font-bold">{{ $moneyCents($financial['actual_indirect_tax']) }}</p></div>
@@ -75,19 +83,8 @@
 </section>
 
 <section class="mb-6 rounded-xl border bg-white p-5 shadow-sm">
-    <h2 class="text-lg font-bold">Phân loại VAT theo sản phẩm</h2>
-    <p class="mt-1 text-sm text-gray-600">Mapping này ghi đè mức mặc định demo cho sản phẩm được chọn và có thể cập nhật lại mà không sửa dữ liệu sản phẩm.</p>
-    <form method="POST" action="{{ route('admin.finance.product-tax-profiles.save') }}" class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        @csrf
-        <label>Sản phẩm<select required name="product_id" class="block w-full rounded-lg border-gray-300"><option value="">Chọn sản phẩm</option>@foreach($products as $product)<option value="{{ $product->id }}">{{ $product->name }}</option>@endforeach</select></label>
-        <label>Phân loại VAT<select required name="vat_category" class="block w-full rounded-lg border-gray-300">@foreach($vatCategories as $key=>$label)<option value="{{ $key }}">{{ $label }}</option>@endforeach</select></label>
-        <label>Thuế suất tùy chỉnh (%)<input type="number" min="0" max="100" step="0.0001" name="vat_rate" class="block w-full rounded-lg border-gray-300"><span class="text-xs text-gray-500">Chỉ nhập khi chọn Tùy chỉnh</span></label>
-        <label>Giá sản phẩm<select required name="price_includes_vat" class="block w-full rounded-lg border-gray-300"><option value="1">Đã bao gồm VAT</option><option value="0">Chưa bao gồm VAT</option></select></label>
-        <label>Hiệu lực từ<input required type="date" name="effective_from" value="2026-01-01" class="block w-full rounded-lg border-gray-300"></label>
-        <label>Hiệu lực đến<input type="date" name="effective_to" value="2026-12-31" class="block w-full rounded-lg border-gray-300"></label>
-        <label class="md:col-span-2">Ghi chú<textarea name="note" class="block w-full rounded-lg border-gray-300"></textarea></label>
-        <div><button class="rounded-lg bg-rose-600 px-5 py-2 text-white">Lưu phân loại VAT</button></div>
-    </form>
+    <div class="flex flex-wrap items-center justify-between gap-4"><div><h2 class="text-lg font-bold">Cấu hình VAT theo nhiều phạm vi</h2><p class="mt-1 text-sm text-gray-600">Áp dụng cho toàn cửa hàng, danh mục hoặc nhiều sản phẩm; lịch sử quy tắc được giữ riêng.</p></div><a href="{{ route('admin.finance.vat-products') }}" class="rounded-lg bg-rose-600 px-5 py-2 font-semibold text-white">Mở cấu hình VAT sản phẩm</a></div>
+    <p class="mt-3 text-sm text-gray-600">Mapping một sản phẩm cũ được giữ để tương thích dữ liệu hiện có. Không thể ghi đè mapping cũ từ đây; quy tắc mới phải được thêm tại trang cấu hình để không làm thay đổi lịch sử đơn.</p>
     @if($productTaxProfiles->isNotEmpty())
     <div class="mt-5 overflow-x-auto"><table class="w-full min-w-[720px] text-left text-sm"><thead><tr><th>Sản phẩm</th><th>Phân loại</th><th>Thuế suất</th><th>Giá</th><th>Hiệu lực</th></tr></thead><tbody>@foreach($productTaxProfiles as $mapping)<tr class="border-t"><td class="py-3">{{ $mapping->product_name }}</td><td>{{ $vatCategories[$mapping->vat_category] ?? $mapping->vat_category }}</td><td>{{ number_format((float) $mapping->vat_rate, 2, ',', '.') }}%</td><td>{{ $mapping->price_includes_vat ? 'Đã gồm VAT' : 'Chưa gồm VAT' }}</td><td>{{ $displayDate($mapping->effective_from) }} – {{ $displayDate($mapping->effective_to) }}</td></tr>@endforeach</tbody></table></div>
     @endif
@@ -104,6 +101,7 @@
     <ul class="mt-3 list-disc space-y-2 pl-5 text-sm">
         <li>Luật Thuế thu nhập doanh nghiệp số 67/2025/QH15.</li>
         <li>Nghị định số 320/2025/NĐ-CP.</li>
+        <li><a class="text-rose-700 underline" href="https://vanban.chinhphu.vn/?classid=1&docid=219330&orggroupid=1&pageid=27160" target="_blank" rel="noopener">Nghị quyết số 43/2026/QH16</a>, giảm 30% số thuế TNDN phải nộp cho kỳ 2026–2027 nếu doanh thu năm không quá 10 tỷ đồng và không thuộc ngoại lệ chia/tách.</li>
         <li><a class="text-rose-700 underline" href="https://vanban.chinhphu.vn/?classid=1&docid=217960&pageid=27160&typegroupid=4" target="_blank" rel="noopener">Nghị định số 141/2026/NĐ-CP</a>, áp dụng từ 01/01/2026.</li>
         <li>Luật Thuế giá trị gia tăng số 48/2024/QH15.</li>
         <li><a class="text-rose-700 underline" href="https://vanban.chinhphu.vn/default.aspx?docid=214209&pageid=27160" target="_blank" rel="noopener">Nghị quyết số 204/2025/QH15</a>, giảm VAT với nhóm đủ điều kiện đến hết 31/12/2026.</li>

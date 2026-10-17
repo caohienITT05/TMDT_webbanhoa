@@ -8,6 +8,8 @@
     $discountPercent = $hasSale && $originalPrice > 0 ? (int) round((1 - ($salePrice / $originalPrice)) * 100) : 0;
     $isFavorite = in_array($product->id, session('favorites', []));
     $productUrl = route('product.detail', $product->slug ?: $product->id);
+    $soldQuantity = (int) ($product->display_sold_quantity ?? $product->ordered_quantity ?? 0);
+    $reviewCount = (int) ($product->published_reviews_count ?? 0);
 @endphp
 
 <article class="bloom-product-card group relative flex h-full flex-col overflow-hidden rounded-xl border border-bloom-line bg-white transition duration-200 hover:-translate-y-1 hover:shadow-bloom">
@@ -31,6 +33,14 @@
             <p class="mb-1 text-xs font-medium text-bloom-muted">{{ $product->category->name }}</p>
         @endif
         <h3 class="line-clamp-2 min-h-12 font-display text-lg font-semibold leading-6 text-bloom-ink"><a href="{{ $productUrl }}" class="transition hover:text-bloom-rose">{{ $product->name }}</a></h3>
+        <div class="mt-1 flex flex-wrap gap-x-3 text-xs text-bloom-muted">
+            @if ($reviewCount > 0)
+                <span><span class="text-amber-500">★</span> {{ number_format((float) ($product->published_reviews_avg_rating ?? 0), 1, ',', '.') }} ({{ $reviewCount }} đánh giá)</span>
+            @else
+                <span>Chưa có đánh giá đã duyệt</span>
+            @endif
+            <span>Đã bán {{ $soldQuantity }}</span>
+        </div>
         <div class="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span class="text-base font-bold text-bloom-rose">{{ number_format($currentPrice, 0, ',', '.') }}₫</span>
             @if ($hasSale)

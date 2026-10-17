@@ -149,8 +149,8 @@ class GiftAdvisorService
             }
         } else {
             $message = $providerActive
-                ? $this->validatedAssistantMessage($onlineData['assistant_message'], $productCards, $context, $turn['patch'], count($suggestions))
-                : $this->fallbackMessage($context, $turn['patch'], count($suggestions));
+                ? $this->validatedAssistantMessage($onlineData['assistant_message'], $productCards, $customCards, $context, $turn['patch'], count($suggestions))
+                : $this->fallbackMessage($context, $turn['patch'], count($suggestions), $productCards, $customCards);
         }
 
         if ($providerActive && ! $strictEntity && $onText !== null) {
@@ -749,30 +749,41 @@ class GiftAdvisorService
         ];
     }
 
-    private function fallbackMessage(array $context, array $patch, int $suggestionCount): string
+    private function fallbackMessage(array $context, array $patch, int $suggestionCount, array $productCards = [], array $customCards = []): string
     {
-        $focus = $context['product_focus'] ?? 'flower';
-        $itemType = mb_strtolower($this->typeLabel($focus));
-        if (($context['occasion'] ?? null) !== null) {
-            $intro = 'Mình đang tìm ' . $itemType . ' cho dịp ' . $this->occasionLabel($context['occasion']);
-        } elseif (($context['recipient'] ?? null) !== null) {
-            $intro = 'Mình đang tìm ' . $itemType . ' cho ' . $this->recipientLabel($context['recipient']);
-        } else {
-            $intro = 'Mình đang tìm ' . $itemType . ' theo những gì bạn ưu tiên';
-        }
-        if (($context['occasion'] ?? null) !== null && ($context['recipient'] ?? null) !== null) $intro .= ' dành tặng ' . $this->recipientLabel($context['recipient']);
+        $itemType = mb_strtolower($this->typeLabel($context['product_focus'] ?? 'flower'));
+        $request = [];
+        if (($context['occasion'] ?? null) !== null) $request[] = 'dịp ' . $this->occasionLabel($context['occasion']);
+        if (($context['recipient'] ?? null) !== null) $request[] = 'tặng ' . $this->recipientLabel($context['recipient']);
         $preferences = [];
-        if (! empty($context['colors'])) $preferences[] = 'tông ' . $this->colorLabel($context['colors'], false);
+        if (! empty($context['colors'])) $preferences[] = 'tông ' . $this->colorLabel($context['colors'], (bool) ($context['color_flexible'] ?? false));
         if (! empty($context['styles'])) $preferences[] = 'phong cách ' . $this->styleLabel($context['styles']);
-        if (! ($context['budget_unlimited'] ?? false) && ($context['budget_max'] ?? null) !== null) $preferences[] = 'ngân sách đến khoảng ' . number_format((int) $context['budget_max'], 0, ',', '.') . 'đ';
-        if (($patch['budget']['action'] ?? null) === 'clear') $preferences[] = 'không giới hạn ngân sách';
+        $min = ($context['budget_unlimited'] ?? false) ? null : ($context['budget_min'] ?? null);
+        $max = ($context['budget_unlimited'] ?? false) ? null : ($context['budget_max'] ?? null);
+        if ($min !== null && $max !== null) $preferences[] = 'giá từ ' . number_format((int) $min, 0, ',', '.') . 'đ đến ' . number_format((int) $max, 0, ',', '.') . 'đ';
+        elseif ($max !== null) $preferences[] = 'giá không quá ' . number_format((int) $max, 0, ',', '.') . 'đ';
+        elseif ($min !== null) $preferences[] = 'giá từ ' . number_format((int) $min, 0, ',', '.') . 'đ';
+        elseif (($patch['budget']['action'] ?? null) === 'clear') $preferences[] = 'không giới hạn ngân sách';
+
+        $intro = $request !== [] ? 'Với ' . $itemType . ' ' . implode(' ', $request) : 'Theo nhu cầu bạn vừa mô tả, mình sẽ chọn ' . $itemType;
         if ($preferences !== []) $intro .= ', ưu tiên ' . implode(' và ', $preferences);
-        if ($suggestionCount === 0) return $intro . '. Hiện chưa có lựa chọn mới khớp đủ yêu cầu; bạn có thể nới một tiêu chí để mình tìm tiếp.';
-
-        $countLabel = $suggestionCount === 1 ? '1 lựa chọn' : $suggestionCount . ' lựa chọn';
+        $intro .= '.';
+        if ($suggestionCount === 0) return $intro . ' Hiện chưa có lựa chọn nào khớp đủ các tiêu chí; bạn có thể nới ngân sách hoặc màu sắc để mình lọc lại.';
         $refresh = ($patch['recommendations']['action'] ?? null) === 'refresh' ? 'Mình đã loại các gợi ý vừa xem. ' : '';
-
-        return $refresh . $intro . '. Mình tìm được ' . $countLabel . ' để bạn tham khảo; giá và tình trạng hàng có sẵn lấy từ BloomGift, còn thiết kế riêng cần được xác nhận trước khi nhận yêu cầu.';
+        $message = $refresh . $intro;
+        $topProducts = collect($productCards)->take(2)->filter(fn ($card) => filled($card['name'] ?? null))->values();
+        if ($topProducts->isNotEmpty()) {
+            $names = $topProducts->map(function (array $card): string {
+                $name = '“' . trim((string) $card['name']) . '”';
+                return is_numeric($card['price'] ?? null) ? $name . ' (' . number_format((float) $card['price'], 0, ',', '.') . 'đ)' : $name;
+            });
+            $message .= ' Trong cửa hàng, mình chọn ' . $names->implode(' và ') . ' để bạn xem trước; giá trong thẻ lấy theo sản phẩm BloomGift hiện có.';
+            if (count($productCards) > $topProducts->count()) $message .= ' Bên dưới còn ' . (count($productCards) - $topProducts->count()) . ' mẫu phù hợp khác.';
+        } elseif ($productCards === []) {
+            $message .= ' Mình chưa thấy sản phẩm trong shop khớp đủ tiêu chí này.';
+        }
+        if ($customCards !== []) $message .= ' Bên dưới có thêm ' . count($customCards) . ' ý tưởng thiết kế theo yêu cầu; giá và khả năng thực hiện cần BloomGift xác nhận.';
+        return $message;
     }
 
     private function isExclusionOnlyTurn(string $query, array $patch): bool
@@ -1079,16 +1090,16 @@ class GiftAdvisorService
             && ($context['styles'] ?? []) === [];
     }
 
-    private function validatedAssistantMessage(string $message, array $productCards, array $context, array $patch, int $suggestionCount): string
+    private function validatedAssistantMessage(string $message, array $productCards, array $customCards, array $context, array $patch, int $suggestionCount): string
     {
         $normalized = Str::lower($message);
         if (preg_match('/\b(?:em|tôi|chúng tôi|anh|chị)\b/u', $normalized)
             || ! preg_match('/[ăâđêôơưàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹ]/u', $normalized)) {
-            return $this->validatedMessageFallback($context, $patch, $suggestionCount, 'language_or_pronoun_mismatch');
+            return $this->validatedMessageFallback($context, $patch, $suggestionCount, $productCards, $customCards, 'language_or_pronoun_mismatch');
         }
         if (preg_match('/\b\d+\s+(?:gợi ý|hướng|lựa chọn|mẫu)\b/u', $message)) {
             if ($suggestionCount === 0) {
-                return $this->validatedMessageFallback($context, $patch, $suggestionCount, 'incorrect_suggestion_count');
+                return $this->validatedMessageFallback($context, $patch, $suggestionCount, $productCards, $customCards, 'incorrect_suggestion_count');
             }
             $message = preg_replace_callback('/\b\d+\s+(gợi ý|hướng|lựa chọn|mẫu)\b/iu', fn (array $match): string => $suggestionCount . ' ' . $match[1], $message) ?? $message;
             $normalized = Str::lower($message);
@@ -1105,23 +1116,23 @@ class GiftAdvisorService
         foreach ($staleOccasions as $occasion => $terms) {
             if ($occasion === ($context['occasion'] ?? null)) continue;
             foreach ($terms as $term) {
-                if (Str::contains($normalized, $term)) return $this->validatedMessageFallback($context, $patch, $suggestionCount, 'stale_occasion');
+                if (Str::contains($normalized, $term)) return $this->validatedMessageFallback($context, $patch, $suggestionCount, $productCards, $customCards, 'stale_occasion');
             }
         }
         if (($context['recipient'] ?? null) === null && Str::contains($normalized, ['người nhận', 'dành cho người nhận'])) {
-            return $this->validatedMessageFallback($context, $patch, $suggestionCount, 'unspecified_recipient');
+            return $this->validatedMessageFallback($context, $patch, $suggestionCount, $productCards, $customCards, 'unspecified_recipient');
         }
         foreach ($productCards as $card) {
             $name = trim((string) ($card['name'] ?? ''));
             if ($name !== '' && Str::contains($normalized, Str::lower($name))) {
-                return $this->validatedMessageFallback($context, $patch, $suggestionCount, 'repeated_product_title');
+                return $this->validatedMessageFallback($context, $patch, $suggestionCount, $productCards, $customCards, 'repeated_product_title');
             }
         }
 
         return $message;
     }
 
-    private function validatedMessageFallback(array $context, array $patch, int $suggestionCount, string $reason): string
+    private function validatedMessageFallback(array $context, array $patch, int $suggestionCount, array $productCards, array $customCards, string $reason): string
     {
         Log::info('BloomGift AI answer validation fallback', [
             'AI_PROVIDER_ACTIVE' => config('services.bloomgift_ai.driver'),
@@ -1130,7 +1141,7 @@ class GiftAdvisorService
             'reason' => $reason,
         ]);
 
-        return $this->fallbackMessage($context, $patch, $suggestionCount);
+        return $this->fallbackMessage($context, $patch, $suggestionCount, $productCards, $customCards);
     }
 
     private function isCoherentConcept(array $idea, array $context): bool

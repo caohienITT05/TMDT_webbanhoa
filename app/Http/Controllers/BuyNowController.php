@@ -34,10 +34,6 @@ class BuyNowController extends Controller
             'quantity' => $quantity,
         ]);
 
-        if (!Auth::check()) {
-            return redirect()->guest(route('login'));
-        }
-
         return redirect()->route('buy-now.checkout');
     }
 }

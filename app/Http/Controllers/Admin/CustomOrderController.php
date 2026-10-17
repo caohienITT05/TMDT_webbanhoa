@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -107,7 +108,7 @@ class CustomOrderController extends Controller
         return view('admin.custom-orders.create-order', compact('customOrderRequest', 'products', 'deliverySlots'));
     }
 
-    public function storeOrder(Request $request, CustomOrderRequest $customOrderRequest): RedirectResponse
+    public function storeOrder(Request $request, CustomOrderRequest $customOrderRequest, InventoryService $inventory): RedirectResponse
     {
         if ($customOrderRequest->status !== 'accepted' || $customOrderRequest->order_id) {
             return redirect()->route('admin.custom-orders.show', $customOrderRequest)
@@ -135,7 +136,7 @@ class CustomOrderController extends Controller
             return back()->withInput()->with('error', 'Số lượng đặt vượt quá tồn kho của sản phẩm đã chọn.');
         }
 
-        $order = DB::transaction(function () use ($validated, $customOrderRequest, $product) {
+        $order = DB::transaction(function () use ($validated, $customOrderRequest, $product, $inventory) {
             $quantity = (int) $validated['quantity'];
             $unitPrice = (float) $validated['unit_price'];
             $subtotal = $unitPrice * $quantity;
@@ -177,6 +178,11 @@ class CustomOrderController extends Controller
                 'subtotal' => $subtotal,
                 'total' => $subtotal,
             ]);
+
+            $inventory->reserveForOrder($order, [[
+                'product_id' => $product->id,
+                'quantity' => $quantity,
+            ]]);
 
             Payment::create([
                 'order_id' => $order->id,

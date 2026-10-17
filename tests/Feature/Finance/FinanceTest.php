@@ -8,6 +8,7 @@ use App\Services\TaxComplianceService;
 use Database\Seeders\BloomGift2026EnterpriseTaxDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\Concerns\CreatesBloomGiftData;
 use Tests\TestCase;
 
@@ -20,9 +21,10 @@ class FinanceTest extends TestCase
     private function financialOrder(string $status = 'completed', ?int $cost = 250000): array
     {
         $product = $this->createProduct(['price' => 500000, 'cost_price' => $cost]);
-        $order = $this->createOrder(null, ['order_status' => $status, 'subtotal' => 1000000, 'discount' => 50000, 'shipping_fee' => 30000, 'total' => 980000]);
+        $order = $this->createOrder(null, ['order_status' => $status, 'subtotal' => 1000000, 'discount' => 50000, 'shipping_fee' => 30000, 'total' => 980000, 'total_amount' => 980000]);
         $item = OrderItem::create(['order_id' => $order->id, 'product_id' => $product->id, 'product_name' => $product->name, 'price' => 500000, 'quantity' => 2, 'subtotal' => 1000000]);
-        DB::table('order_costs')->insert(['order_id' => $order->id, 'shipping_cost_actual' => 40000, 'packaging_cost_actual' => 20000, 'payment_gateway_fee_actual' => 10000, 'other_direct_cost' => 0]);
+        DB::table('order_costs')->insert(['order_id' => $order->id, 'shipping_cost_actual' => 40000, 'packaging_cost_actual' => 20000, 'payment_gateway_fee_actual' => 10000, 'other_direct_cost' => 0, 'source' => 'manual']);
+        DB::table('expenses')->insert(['expense_code' => 'CP-TEST-'.strtoupper(Str::random(8)), 'expense_type' => 'other', 'description' => 'Đã đối chiếu không phát sinh chi phí vận hành trong test', 'amount' => 0, 'expense_date' => now()->toDateString()]);
 
         return [$order, $item, $product];
     }
@@ -38,11 +40,35 @@ class FinanceTest extends TestCase
         $this->assertNull(app(FinanceAnalyticsService::class)->getPeriodSummary(now()->toDateString(), now()->toDateString())['totals']['profit_before_tax']);
     }
 
+    public function test_gift_service_fees_are_separated_and_legacy_amount_stays_unallocated(): void
+    {
+        [$order] = $this->financialOrder();
+        $service = app(FinanceAnalyticsService::class);
+
+        $legacy = $service->orderSummary($order->fresh()->load('items'), DB::table('order_costs')->where('order_id', $order->id)->first());
+        $this->assertSame(0, $legacy['unallocated_income']);
+        $this->assertNull($legacy['gift_service_income']);
+
+        $order->update(['total' => 1150000, 'total_amount' => 1150000, 'gift_card_fee' => 10000, 'gift_wrap_fee' => 30000]);
+        $itemCost = DB::table('order_costs')->where('order_id', $order->id)->first();
+        $known = $service->orderSummary($order->fresh()->load('items'), $itemCost);
+        $this->assertSame(4000000, $known['gift_service_income']);
+        $this->assertSame(13000000, $known['unallocated_income']);
+        $this->assertNull($known['estimated_order_profit']);
+        $this->assertNull($known['order_profit']);
+
+        DB::table('order_costs')->where('order_id', $order->id)->update(['source' => 'system_default']);
+        $estimate = $service->orderSummary($order->fresh()->load('items'), DB::table('order_costs')->where('order_id', $order->id)->first());
+        $this->assertSame(45000000, $estimate['estimated_order_profit']);
+    }
+
     public function test_completed_forecast_and_cancelled_orders_are_not_mixed(): void
     {
         $this->financialOrder();
         $this->financialOrder('pending');
         $this->financialOrder('cancelled');
+        [$refunded] = $this->financialOrder();
+        $refunded->update(['payment_status' => 'refunded']);
         DB::table('expenses')->insert(['expense_code' => 'CP-TEST', 'expense_type' => 'rent', 'description' => 'Rent', 'amount' => 100000, 'expense_date' => now()->toDateString()]);
         $service = app(FinanceAnalyticsService::class);
         $actual = $service->getPeriodSummary(now()->toDateString(), now()->toDateString())['totals'];
@@ -53,6 +79,57 @@ class FinanceTest extends TestCase
         $this->assertEquals(41000000, $forecast['order_profit']);
         $this->assertEquals(0, $forecast['operating_expenses']);
         $this->assertNull($actual['net_profit_after_tax']);
+    }
+
+    public function test_dashboard_keeps_recorded_costs_and_configured_estimates_separate(): void
+    {
+        [$order] = $this->financialOrder();
+        DB::table('order_costs')->where('order_id', $order->id)->update(['source' => 'system_default']);
+        $this->createOrder(null, ['order_status' => 'cancelled', 'status' => 'CANCELLED']);
+        DB::table('expenses')->insert([
+            'expense_code' => 'CP-TEST-SPLIT', 'expense_type' => 'rent',
+            'description' => 'Rent entered for this period', 'amount' => 100000,
+            'expense_date' => now()->toDateString(),
+        ]);
+
+        $totals = app(FinanceAnalyticsService::class)
+            ->getPeriodSummary(now()->toDateString(), now()->toDateString())['totals'];
+
+        $this->assertSame(60000000, $totals['recorded_costs_subtotal']);
+        $this->assertSame(7000000, $totals['configured_costs_estimate']);
+        $this->assertSame(67000000, $totals['costs_shown_subtotal']);
+        $this->assertTrue($totals['costs_shown_incomplete']);
+        $this->assertNull($totals['profit_before_tax']);
+        $this->assertSame(31000000, $totals['provisional_profit_before_tax']);
+
+        $this->actingAs($this->createAdmin())->get(route('admin.finance.index'))
+            ->assertOk()
+            ->assertSee('Chi phí đã ghi và tạm tính')
+            ->assertSee('670.000 đ')
+            ->assertSee('310.000 đ')
+            ->assertSee('chưa gồm chi phí đơn hủy chưa rõ');
+    }
+
+    public function test_zero_system_defaults_do_not_pretend_missing_cost_data_is_zero(): void
+    {
+        $product = $this->createProduct(['cost_price' => null]);
+        $order = $this->createOrder(null, ['order_status' => 'completed', 'status' => 'COMPLETED']);
+        OrderItem::create([
+            'order_id' => $order->id, 'product_id' => $product->id,
+            'product_name' => $product->name, 'price' => $product->price,
+            'quantity' => 1, 'subtotal' => $product->price,
+        ]);
+        DB::table('order_costs')->insert([
+            'order_id' => $order->id, 'source' => 'system_default',
+            'shipping_cost_actual' => 0, 'packaging_cost_actual' => 0,
+            'payment_gateway_fee_actual' => 0, 'other_direct_cost' => 0,
+        ]);
+
+        $totals = app(FinanceAnalyticsService::class)
+            ->getPeriodSummary(now()->toDateString(), now()->toDateString())['totals'];
+        $this->assertNull($totals['recorded_costs_subtotal']);
+        $this->assertNull($totals['costs_shown_subtotal']);
+        $this->assertTrue($totals['costs_shown_incomplete']);
     }
 
     public function test_order_totals_flow_into_finance_revenue_automatically(): void
@@ -73,6 +150,14 @@ class FinanceTest extends TestCase
             'total' => 900000,
             'total_amount' => 900000,
         ]);
+        $this->createOrder(null, [
+            'status' => 'RETURNED', 'order_status' => 'completed', 'payment_status' => 'paid',
+            'total' => 2000000, 'total_amount' => 2000000,
+        ]);
+        $this->createOrder(null, [
+            'status' => 'COMPLETED', 'order_status' => 'completed', 'payment_status' => 'refunded',
+            'total' => 3000000, 'total_amount' => 3000000,
+        ]);
 
         $service = app(FinanceAnalyticsService::class);
         $day = now()->toDateString();
@@ -80,6 +165,8 @@ class FinanceTest extends TestCase
         $this->assertEquals(100000000, $flow['recognized_revenue']);
         $this->assertEquals(150000000, $flow['orders_value']);
         $this->assertEquals(50000000, $flow['awaiting_revenue']);
+        $this->assertSame(2, $flow['orders_count']);
+        $this->assertSame(1, $flow['awaiting_count']);
 
         $awaiting->update(['payment_status' => 'paid']);
         $this->assertEquals(150000000, $service->revenueFlow($day, $day)['recognized_revenue']);
@@ -88,6 +175,84 @@ class FinanceTest extends TestCase
         $this->get(route('admin.dashboard'))->assertOk()->assertSee('1.500.000 đ');
         $this->get(route('admin.finance.index'))->assertOk()->assertSee('1.500.000 đ');
         $this->assertDatabaseHas('orders', ['id' => $recognized->id, 'total_amount' => 1000000]);
+    }
+
+    public function test_finance_separates_order_recognition_from_payment_records(): void
+    {
+        $confirmedCod = $this->createOrder(null, [
+            'order_status' => 'confirmed', 'status' => 'CONFIRMED', 'total_amount' => 1000000, 'total' => 1000000,
+        ]);
+        $paypal = $this->createOrder(null, [
+            'order_status' => 'confirmed', 'status' => 'CONFIRMED', 'payment_method' => 'paypal',
+            'total_amount' => 800000, 'total' => 800000,
+        ]);
+        $this->createPayment($paypal, ['status' => 'completed', 'amount' => 650000]);
+
+        $this->actingAs($this->createAdmin())
+            ->get(route('admin.finance.index'))
+            ->assertOk()
+            ->assertViewHas('actual', fn ($actual) => $actual['totals']['recognized_revenue'] === 180000000)
+            ->assertViewHas('collectedTotal', 65000000)
+            ->assertSee('Tiền đã thu')
+            ->assertSee('650.000 đ');
+    }
+
+    public function test_finance_overview_uses_active_order_quantity_while_completed_report_stays_separate(): void
+    {
+        $product = $this->createProduct(['name' => 'Sales scope QA product']);
+        $processing = $this->createOrder(null, ['order_status' => 'processing', 'status' => 'PROCESSING']);
+        $completed = $this->createOrder(null, ['order_status' => 'completed', 'status' => 'COMPLETED']);
+        $failed = $this->createOrder(null, ['order_status' => 'failed', 'status' => 'FAILED', 'payment_status' => 'failed']);
+
+        foreach ([[$processing, 3, 'Old snapshot name'], [$completed, 2, 'Other historical name'], [$failed, 8, $product->name]] as [$order, $quantity, $snapshotName]) {
+            OrderItem::create([
+                'order_id' => $order->id,
+                'product_id' => $product->id,
+                'product_name' => $snapshotName,
+                'price' => 500000,
+                'quantity' => $quantity,
+                'subtotal' => $quantity * 500000,
+            ]);
+        }
+
+        $this->actingAs($this->createAdmin())
+            ->get(route('admin.finance.index', ['period' => 'custom', 'from_date' => now()->toDateString(), 'to_date' => now()->toDateString()]))
+            ->assertOk()
+            ->assertViewHas('bestSellers', fn ($rows) => $rows->contains(fn ($row) => (int) $row->product_id === $product->id && (int) $row->quantity === 5 && $row->product_name === $product->name))
+            ->assertViewHas('completedBestSellers', fn ($rows) => $rows->contains(fn ($row) => (int) $row->product_id === $product->id && (int) $row->quantity === 2 && $row->product_name === $product->name))
+            ->assertSee('Sản phẩm được đặt nhiều trong kỳ')
+            ->assertSee('không phải doanh thu đã ghi nhận');
+    }
+
+    public function test_conflicting_order_statuses_do_not_promote_processing_order_to_completed(): void
+    {
+        $order = $this->createOrder(null, [
+            'order_status' => 'processing', 'status' => 'COMPLETED', 'payment_status' => 'pending',
+            'total_amount' => 1200000, 'total' => 1200000,
+        ]);
+        $day = $order->created_at->toDateString();
+
+        $summary = app(FinanceAnalyticsService::class)->getPeriodSummary($day, $day, false, false);
+        $flow = app(FinanceAnalyticsService::class)->revenueFlow($day, $day);
+
+        $this->assertSame(0, $summary['totals']['order_count']);
+        $this->assertSame(0, $flow['recognized_count']);
+        $this->assertSame(120000000, $flow['awaiting_revenue']);
+        $this->assertSame(0.0, app(TaxComplianceService::class)->recognizedRevenueForYear((int) now()->year));
+    }
+
+    public function test_legacy_order_total_is_used_when_total_amount_snapshot_is_only_default_zero(): void
+    {
+        $order = $this->createOrder(null, [
+            'order_status' => 'confirmed', 'status' => 'CONFIRMED', 'payment_status' => 'pending',
+            'total_amount' => 0, 'total' => 500000,
+        ]);
+        $day = $order->created_at->toDateString();
+        $flow = app(FinanceAnalyticsService::class)->revenueFlow($day, $day);
+
+        $this->assertSame(50000000, $flow['recognized_revenue']);
+        $this->assertSame(50000000, $flow['orders_value']);
+        $this->assertSame(500000.0, app(TaxComplianceService::class)->recognizedRevenueForYear((int) now()->year));
     }
 
     public function test_tax_estimates_are_separate_and_actual_requires_exact_period(): void
@@ -104,6 +269,32 @@ class FinanceTest extends TestCase
         $this->assertEquals(3500000, $summary['actual_tax']);
         $this->assertEquals(37500000, $summary['net_profit_after_tax']);
         $this->assertNull($service->getPeriodSummary(now()->subDay()->toDateString(), $day)['totals']['actual_tax']);
+    }
+
+    public function test_tax_rates_and_catalog_vat_stay_unknown_without_a_business_profile(): void
+    {
+        $service = app(TaxComplianceService::class);
+
+        $this->assertSame('unconfigured', $service->corporateIncomeTaxEvaluation()['status']);
+        $this->assertNull($service->corporateIncomeTaxRate());
+        $this->assertNull($service->estimateCatalogOutputVat('2026-01-01', '2026-12-31')['tax']);
+
+        DB::table('tax_settings')->insert([
+            'tax_type' => 'corporate_demo',
+            'tax_name' => 'Thuế TNDN demo',
+            'tax_category' => 'income',
+            'tax_base' => 'profit_before_tax',
+            'calculation_method' => 'corporate_income_2026',
+            'rate' => 15,
+            'effective_from' => '2026-01-01',
+            'effective_to' => '2026-12-31',
+            'is_active' => true,
+        ]);
+
+        $taxes = $service->calculatePeriodTaxes('2026-01-01', '2026-12-31', ['profit_before_tax' => 100000000]);
+        $this->assertSame('unconfigured', $taxes['cit_status']);
+        $this->assertNull($taxes['estimated_tax']);
+        $this->assertNull($taxes['cit_rate']);
     }
 
     public function test_multiple_tax_types_require_all_actual_records_and_mid_period_rules_need_explicit_record(): void
@@ -149,7 +340,8 @@ class FinanceTest extends TestCase
         $summary = app(FinanceAnalyticsService::class)->getPeriodSummary(now()->toDateString(), now()->toDateString())['totals'];
 
         $this->assertSame(0, $summary['estimated_tax']);
-        $this->assertSame(7259259, $summary['estimated_indirect_tax']);
+        $this->assertNull($summary['estimated_indirect_tax']);
+        $this->assertSame(95000000, $summary['unclassified_indirect_tax_base']);
         $this->assertSame(41000000, $summary['estimated_net_profit_after_tax']);
         $this->assertNull($summary['actual_tax']);
         $this->assertNull($summary['actual_indirect_tax']);
@@ -161,6 +353,52 @@ class FinanceTest extends TestCase
             ->assertSee('Dự kiến được miễn')
             ->assertSee('Chưa kết nối')
             ->assertSee('Nghị định số 141/2026/NĐ-CP');
+    }
+
+    public function test_2026_catalog_vat_is_reported_as_incomplete_until_products_are_classified(): void
+    {
+        $this->seed(BloomGift2026EnterpriseTaxDemoSeeder::class);
+        $this->financialOrder();
+        $totals = app(FinanceAnalyticsService::class)->getPeriodSummary(now()->toDateString(), now()->toDateString())['totals'];
+
+        $this->assertNull($totals['estimated_indirect_tax']);
+        $this->assertSame(95000000, $totals['unclassified_indirect_tax_base']);
+    }
+
+    public function test_catalog_vat_uses_explicit_product_mapping_and_configured_shipping_rate(): void
+    {
+        $this->seed(BloomGift2026EnterpriseTaxDemoSeeder::class);
+        [, , $product] = $this->financialOrder();
+        DB::table('product_tax_profiles')->insert([
+            'product_id' => $product->id, 'vat_category' => 'eight', 'vat_rate' => 8,
+            'price_includes_vat' => true, 'effective_from' => '2026-01-01', 'effective_to' => '2026-12-31',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $totals = app(FinanceAnalyticsService::class)->getPeriodSummary(now()->toDateString(), now()->toDateString())['totals'];
+
+        $this->assertSame(7259259, $totals['estimated_indirect_tax']);
+        $this->assertSame(0, $totals['unclassified_indirect_tax_base']);
+    }
+
+    public function test_2026_reduction_applies_only_after_annual_revenue_and_split_status_are_confirmed(): void
+    {
+        $this->seed(BloomGift2026EnterpriseTaxDemoSeeder::class);
+        DB::table('tax_profiles')->update([
+            'projected_annual_revenue' => 4_000_000_000,
+            'actual_annual_revenue' => null,
+            'is_split_from_large_enterprise' => false,
+        ]);
+        $service = app(TaxComplianceService::class);
+        $eligible = $service->corporateIncomeTaxEvaluation();
+        $this->assertSame('eligible_estimate', $eligible['cit_reduction_status']);
+        $this->assertSame(30, $eligible['cit_reduction_percent']);
+        $reduced = $service->calculatePeriodTaxes('2026-01-01', '2026-12-31', ['profit_before_tax' => 10_000_000_000]);
+        $this->assertSame(1_190_000_000, $reduced['estimated_tax']);
+
+        DB::table('tax_profiles')->update(['is_split_from_large_enterprise' => null]);
+        $unknown = $service->corporateIncomeTaxEvaluation();
+        $this->assertSame('needs_confirmation', $unknown['cit_reduction_status']);
+        $this->assertSame(0, $unknown['cit_reduction_percent']);
     }
 
     public function test_2026_enterprise_cit_rate_uses_revenue_thresholds_and_related_party_exclusion(): void
@@ -237,7 +475,7 @@ class FinanceTest extends TestCase
             'product_id' => $product->id,
             'vat_category' => 'five',
             'price_includes_vat' => 1,
-            'effective_from' => '2026-01-01',
+            'effective_from' => now()->toDateString(),
             'effective_to' => '2026-12-31',
         ])->assertSessionHasNoErrors();
 
@@ -245,13 +483,78 @@ class FinanceTest extends TestCase
         $product->refresh();
         $this->assertEquals($before, $product->only($businessFields));
         $this->assertSame($beforeUpdatedAt, $product->updated_at?->toISOString());
+        $this->actingAs($this->createAdmin())->post(route('admin.finance.product-tax-profiles.save'), [
+            'product_id' => $product->id,
+            'vat_category' => 'ten',
+            'price_includes_vat' => 1,
+            'effective_from' => now()->toDateString(),
+        ])->assertSessionHasErrors('product_id');
+        $this->assertDatabaseHas('product_tax_profiles', ['product_id' => $product->id, 'vat_category' => 'five', 'vat_rate' => 5]);
+    }
+
+    public function test_admin_can_add_store_category_and_multi_product_vat_rules_without_overwriting_history(): void
+    {
+        $one = $this->createProduct();
+        $two = $this->createProduct();
+        $today = now()->toDateString();
+        $admin = $this->createAdmin();
+
+        $this->actingAs($admin)->post(route('admin.finance.vat-products.save'), [
+            'scope' => 'store', 'vat_category' => 'eight', 'price_includes_vat' => 1,
+            'effective_from' => $today, 'note' => 'Quy tắc demo toàn cửa hàng',
+        ])->assertSessionHasNoErrors();
+        $this->post(route('admin.finance.vat-products.save'), [
+            'scope' => 'category', 'category_id' => $one->category_id, 'vat_category' => 'five', 'price_includes_vat' => 1,
+            'effective_from' => $today,
+        ])->assertSessionHasNoErrors();
+        $this->post(route('admin.finance.vat-products.save'), [
+            'scope' => 'products', 'product_ids' => [$one->id, $two->id], 'vat_category' => 'custom', 'vat_rate' => 7.5,
+            'price_includes_vat' => 0, 'effective_from' => $today,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('vat_policy_rules', 3);
+        $this->assertDatabaseHas('vat_policy_rules', ['scope' => 'category', 'category_id' => $one->category_id, 'vat_rate' => 5]);
+        $this->assertDatabaseHas('vat_policy_rules', ['scope' => 'products', 'vat_category' => 'custom', 'vat_rate' => 7.5]);
+
+        $this->post(route('admin.finance.vat-products.save'), [
+            'scope' => 'products', 'product_ids' => [$one->id], 'vat_category' => 'ten', 'price_includes_vat' => 1,
+            'effective_from' => $today,
+        ])->assertSessionHasErrors('effective_from');
+        $this->assertDatabaseCount('vat_policy_rules', 3);
+
+        $this->get(route('admin.finance.vat-products'))->assertOk()
+            ->assertSee('Xem trước ảnh hưởng của quy tắc')
+            ->assertSee('Đối soát VAT đơn hàng cũ')
+            ->assertSee('data-price', false)
+            ->assertSee('Lịch sử quy tắc VAT')
+            ->assertSee('Quy tắc demo toàn cửa hàng')->assertSee($one->name)->assertSee($two->name);
+    }
+
+    public function test_vat_policy_specificity_is_product_then_category_then_store_and_uses_order_date(): void
+    {
+        $this->seed(BloomGift2026EnterpriseTaxDemoSeeder::class);
+        [$order, , $product] = $this->financialOrder();
+        $base = [
+            'vat_rate' => null, 'price_includes_vat' => true, 'effective_from' => $order->created_at->toDateString(),
+            'effective_to' => null, 'created_at' => now(), 'updated_at' => now(),
+        ];
+        DB::table('vat_policy_rules')->insert([
+            $base + ['scope' => 'store', 'category_id' => null, 'product_ids' => null, 'vat_category' => 'ten'],
+            $base + ['scope' => 'category', 'category_id' => $product->category_id, 'product_ids' => null, 'vat_category' => 'five'],
+            $base + ['scope' => 'products', 'category_id' => null, 'product_ids' => json_encode([$product->id]), 'vat_category' => 'eight'],
+        ]);
+
+        $vat = app(TaxComplianceService::class)->estimateCatalogOutputVat($order->created_at->toDateString(), $order->created_at->toDateString());
+        $this->assertSame(7259259, $vat['tax']);
+        $this->assertSame(0, $vat['unclassified_base']);
+        $this->assertTrue($vat['complete']);
     }
 
     public function test_finance_pages_are_admin_only_and_render(): void
     {
         [$order] = $this->financialOrder();
         $day = now()->toDateString();
-        $routes = ['admin.finance.index', 'admin.finance.orders', 'admin.finance.settings', 'admin.finance.expenses', 'admin.finance.taxes'];
+        $routes = ['admin.finance.index', 'admin.finance.revenue', 'admin.finance.reconciliation', 'admin.finance.orders', 'admin.finance.settings', 'admin.finance.expenses', 'admin.finance.taxes', 'admin.finance.vat-products'];
         foreach ($routes as $route) {
             $this->get(route($route))->assertRedirect(route('login'));
         }
@@ -261,8 +564,10 @@ class FinanceTest extends TestCase
         foreach ($routes as $route) {
             $this->get(route($route))->assertOk();
         }
-        $this->get(route('admin.finance.index'))->assertOk()->assertSee('Dữ liệu báo cáo')->assertSee('Năm nay');
-        $this->get(route('admin.finance.order', $order))->assertOk()->assertSee('Đủ dữ liệu tài chính');
+        $this->get(route('admin.finance.index'))->assertOk()->assertSee('Tổng quan tài chính')->assertSee('Sáu chỉ số tài chính chính')->assertSee('Doanh thu 12 tháng');
+        $this->get(route('admin.finance.revenue'))->assertOk()->assertSee('So sánh doanh thu & lợi nhuận', false);
+        $this->get(route('admin.finance.reconciliation'))->assertOk()->assertSee('Đơn cần đối soát');
+        $this->get(route('admin.finance.order', $order))->assertOk()->assertSee('Chi phí nhập thủ công, chưa xác minh chứng từ');
         $export = $this->get(route('admin.finance.export', ['from_date' => $day, 'to_date' => $day]))->assertOk();
         $this->assertStringContainsString('DỮ LIỆU TÀI CHÍNH BLOOMGIFT', $export->streamedContent());
         $this->assertStringContainsString($order->order_code, $export->streamedContent());

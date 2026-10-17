@@ -11,16 +11,27 @@
 
     <x-customer.breadcrumb :items="[
         ['label' => 'Trang chủ', 'url' => route('home')],
-        ['label' => 'Đơn hàng của tôi', 'url' => route('customer.orders')],
+        ['label' => 'Đơn hàng của tôi', 'url' => auth()->check() ? route('customer.orders') : route('home')],
         ['label' => $order->order_code ?? ('BG-' . $order->id)],
     ]" />
+
+    @if (session('success'))
+        <div role="status" aria-live="polite" class="bloom-shell mt-5">
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>
+        </div>
+    @endif
+    @if (session('error'))
+        <div role="alert" aria-live="assertive" class="bloom-shell mt-5">
+            <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-800">{{ session('error') }}</div>
+        </div>
+    @endif
 
     <section class="bloom-shell pb-14 sm:pb-20">
         <div class="flex flex-col gap-5 border-b border-bloom-line pb-7 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="bloom-eyebrow">Thông tin đơn hàng</p>
                 <h1 class="bloom-title mt-2">{{ $order->order_code ?? ('BG-' . $order->id) }}</h1>
-                <p class="bloom-subtitle mt-3">Đặt ngày {{ $order->created_at?->format('d/m/Y · H:i') }}</p>
+                <p class="bloom-subtitle mt-3">Đặt ngày {{ $order->created_at_local?->format('d/m/Y · H:i') }}</p>
             </div>
             <div class="flex flex-wrap gap-2"><x-customer.status-badge :status="$status" /><x-customer.status-badge :status="$paymentStatus" type="payment" /></div>
         </div>
@@ -91,6 +102,12 @@
                         @if ($order->payment?->transaction_id)
                             <div class="border-t border-bloom-line pt-3"><p class="text-xs font-bold uppercase tracking-[.1em] text-bloom-muted">Mã giao dịch</p><p class="mt-1 break-all text-xs leading-5 text-bloom-ink">{{ $order->payment->transaction_id }}</p></div>
                         @endif
+                        @if ($order->payment_method === 'paypal' && $paymentStatus !== 'paid' && ! in_array($status, ['cancelled', 'canceled', 'returned', 'refunded'], true))
+                            <div class="border-t border-bloom-line pt-4">
+                                <p class="mb-3 text-xs leading-5 text-bloom-muted">Đơn hàng đang chờ xác nhận thanh toán. Tiếp tục sẽ kiểm tra giao dịch PayPal hiện tại trước, không tạo đơn mới.</p>
+                                <a href="{{ route('paypal.create', $order) }}" class="bloom-button bloom-button--primary w-full justify-center">Kiểm tra hoặc tiếp tục PayPal</a>
+                            </div>
+                        @endif
                     </div>
                 </section>
 
@@ -105,7 +122,7 @@
                     </div>
                     <div class="mt-5 flex items-end justify-between gap-3"><span class="font-semibold text-bloom-ink">Tổng thanh toán</span><span class="text-xl font-bold text-bloom-rose">{{ number_format((float) $total, 0, ',', '.') }}₫</span></div>
                 </section>
-                <a href="{{ route('customer.orders') }}" class="bloom-button bloom-button--ghost w-full"><x-customer.icon name="arrow-left" class="h-4 w-4" />Quay lại đơn hàng</a>
+                <a href="{{ auth()->check() ? route('customer.orders') : route('home') }}" class="bloom-button bloom-button--ghost w-full"><x-customer.icon name="arrow-left" class="h-4 w-4" />Quay lại đơn hàng</a>
             </aside>
         </div>
     </section>

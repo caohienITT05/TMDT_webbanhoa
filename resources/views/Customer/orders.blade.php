@@ -33,7 +33,7 @@
                         <div class="flex flex-col gap-3 border-b border-bloom-line bg-bloom-blush/55 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                                 <p class="font-display text-lg font-semibold text-bloom-plum">{{ $order->order_code ?? ('BG-' . $order->id) }}</p>
-                                <p class="mt-0.5 text-xs text-bloom-muted">Đặt ngày {{ $order->created_at?->format('d/m/Y · H:i') }}</p>
+                                <p class="mt-0.5 text-xs text-bloom-muted">Đặt ngày {{ $order->created_at_local?->format('d/m/Y · H:i') }}</p>
                             </div>
                             <div class="flex flex-wrap items-center gap-2">
                                 <x-customer.status-badge :status="$orderStatus" />

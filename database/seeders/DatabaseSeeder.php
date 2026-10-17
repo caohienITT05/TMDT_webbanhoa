@@ -137,7 +137,6 @@ class DatabaseSeeder extends Seeder
         $slotAfternoon = null;
         foreach ($slots as $item) {
             $slotData = [
-                'time_range' => $item['range'],
                 'max_orders' => $item['max'],
                 'is_active' => true,
             ];
@@ -145,6 +144,8 @@ class DatabaseSeeder extends Seeder
                 $slotData['name'] = $item['name'];
                 $slotData['start_time'] = $item['start'];
                 $slotData['end_time'] = $item['end'];
+            } else {
+                $slotData['time_range'] = $item['range'];
             }
 
             $searchCond = $hasNameCol ? ['name' => $item['name']] : ['time_range' => $item['range']];
@@ -173,8 +174,10 @@ class DatabaseSeeder extends Seeder
             'recipient_address' => 'Phòng 402, Tòa nhà Landmark, Ba Đình, Hà Nội',
             'delivery_date' => now()->addDay(),
             'delivery_slot_id' => $slotAfternoon ? $slotAfternoon->id : null,
-            'card_message' => 'Chúc mừng sinh nhật em gái yêu quý! Chúc em luôn rực rỡ như những đóa hoa.',
             'subtotal' => $product1->price,
+            ...(Schema::hasColumn('orders', 'card_message') ? [
+                'card_message' => 'Chúc mừng sinh nhật em gái yêu quý! Chúc em luôn rực rỡ như những đóa hoa.',
+            ] : []),
         ];
 
         if ($hasOrderCode) $orderData['order_code'] = 'BG-DEMO-0001';

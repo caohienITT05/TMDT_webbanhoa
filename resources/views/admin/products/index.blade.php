@@ -119,8 +119,12 @@
                         @forelse($products as $prod)
                             <tr class="hover:bg-rose-50/40 transition">
                                 <td class="p-3 px-5">
-                                    <img src="{{ $prod->image_url }}" alt="{{ $prod->name }}"
-                                        class="w-11 h-11 object-cover rounded-xl border border-rose-100 shadow-sm">
+                                    @if ($prod->image_url)
+                                        <img src="{{ $prod->image_url }}" alt="{{ $prod->name }}"
+                                            class="w-11 h-11 object-cover rounded-xl border border-rose-100 shadow-sm"
+                                            onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');">
+                                    @endif
+                                    <div class="{{ $prod->image_url ? 'hidden' : '' }} flex w-11 h-11 items-center justify-center rounded-xl border border-rose-100 bg-rose-50 text-rose-400" aria-label="Chưa có ảnh {{ $prod->name }}">🌷</div>
                                 </td>
                                 <td class="p-3 px-5 font-bold text-gray-800">{{ $prod->name }}</td>
                                 <td class="p-3 px-5">

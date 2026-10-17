@@ -75,6 +75,8 @@ class CheckoutTest extends TestCase
             'amount' => 700000,
         ]);
         $this->assertDatabaseMissing('cart_items', ['user_id' => $customer->id]);
+        $this->assertSame(8, (int) $product->fresh()->stock);
+        $this->assertNotNull($order->fresh()->inventory_reserved_at);
         Mail::assertSent(OrderConfirmationMail::class, function (OrderConfirmationMail $mail) use ($customer, $order): bool {
             return $mail->hasTo($customer->email) && $mail->order->is($order);
         });
@@ -127,10 +129,14 @@ class CheckoutTest extends TestCase
             'id' => $order->id,
             'subtotal' => 700000,
             'shipping_fee' => 30000,
+            'gift_card_fee' => 10000,
+            'gift_wrap_fee' => 30000,
             'total' => 770000,
             'total_amount' => 770000,
         ]);
         $this->assertSame(770000.0, (float) $order->total);
+        $this->assertSame(10000.0, (float) $order->gift_card_fee);
+        $this->assertSame(30000.0, (float) $order->gift_wrap_fee);
     }
 
     private function checkoutData(int $deliverySlotId, array $overrides = []): array

@@ -35,7 +35,7 @@ class FinanceWorkflowTest extends TestCase
             'total_amount' => 1030000,
             'shipping_fee' => 30000,
         ]);
-        OrderItem::create([
+        $item = OrderItem::create([
             'order_id' => $order->id,
             'product_id' => $product->id,
             'product_name' => $product->name,
@@ -54,16 +54,29 @@ class FinanceWorkflowTest extends TestCase
         $this->patch(route('admin.orders.update-status', $order), ['order_status' => 'completed'])->assertSessionHasNoErrors();
         $first = DB::table('order_costs')->where('order_id', $order->id)->first();
         $this->assertEquals(45000, $first->shipping_cost_actual);
-        $this->assertEquals(20000, $first->packaging_cost_actual);
-        $this->assertEquals(10000, $first->payment_gateway_fee_actual);
-        $this->assertEquals(0, $first->other_direct_cost);
-        $this->assertNotNull($first->financial_finalized_at);
+        $this->assertNull($first->packaging_cost_actual);
+        $this->assertNull($first->payment_gateway_fee_actual);
+        $this->assertNull($first->other_direct_cost);
+        $this->assertNull($first->financial_finalized_at);
         $this->assertSame('manual', $first->source);
         $this->assertSame('paid', $order->fresh()->payment_status);
 
+        $this->put(route('admin.finance.order.save', $order), [
+            'snapshots' => [$item->id => 250000],
+            'shipping_cost_actual' => 45000,
+            'packaging_cost_actual' => 20000,
+            'payment_gateway_fee_actual' => 10000,
+            'other_direct_cost' => 0,
+        ])->assertSessionHasNoErrors();
+        $reconciled = DB::table('order_costs')->where('order_id', $order->id)->first();
+        $this->assertEquals(20000, $reconciled->packaging_cost_actual);
+        $this->assertEquals(10000, $reconciled->payment_gateway_fee_actual);
+        $this->assertEquals(0, $reconciled->other_direct_cost);
+        $this->assertNotNull($reconciled->financial_finalized_at);
+
         $this->patch(route('admin.orders.update-status', $order), ['order_status' => 'completed'])->assertSessionHasNoErrors();
         $this->assertDatabaseCount('order_costs', 1);
-        $this->assertEquals($first->financial_finalized_at, DB::table('order_costs')->where('order_id', $order->id)->value('financial_finalized_at'));
+        $this->assertEquals($reconciled->financial_finalized_at, DB::table('order_costs')->where('order_id', $order->id)->value('financial_finalized_at'));
     }
 
     public function test_backfill_dry_run_reports_without_writing(): void

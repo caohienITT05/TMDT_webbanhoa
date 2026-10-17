@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\DeliverySlotController as AdminDeliverySlotController;
 use App\Http\Controllers\Admin\CustomOrderController as AdminCustomOrderController;
+use App\Http\Controllers\Admin\ProductReviewController as AdminProductReviewController;
 
 // 2. Controllers Giỏ hàng, Quà tặng & Voucher (TV3)
 use App\Http\Controllers\CartController;
@@ -25,15 +26,19 @@ use App\Http\Controllers\ShippingController;
 // 3. Controllers Đặt hàng & Thanh toán PayPal (TV4)
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Customer\OrderController as CustomerOrderController;
+use App\Http\Controllers\Customer\GuestOrderController;
+use App\Http\Controllers\Customer\ProductReviewController;
 use App\Http\Controllers\Customer\CustomOrderController as CustomerCustomOrderController;
 
 // Models
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductReview;
 use App\Models\User;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,7 +48,9 @@ use Illuminate\Support\Facades\DB;
 
 // Trang chủ
 Route::get('/', function () {
-    $products = Product::where('is_active', true)->latest()->take(8)->get();
+    $products = Product::withSalesMetrics()
+        ->when(Schema::hasTable('product_reviews'), fn ($query) => $query->withCount('publishedReviews')->withAvg('publishedReviews', 'rating'))
+        ->where('is_active', true)->latest()->take(8)->get();
     $categories = Category::all();
 
     return view('Customer.home', compact('products', 'categories'));
@@ -69,14 +76,16 @@ Route::get('/danh-muc-hoa', function () {
 
 Route::get('/danh-muc/{slug}', function ($slug) {
     $category = Category::with('children')->where('slug', $slug)->firstOrFail();
-    $products = Product::where('category_id', $category->id)->where('is_active', true)->paginate(12);
+    $products = Product::withSalesMetrics()
+        ->when(Schema::hasTable('product_reviews'), fn ($query) => $query->withCount('publishedReviews')->withAvg('publishedReviews', 'rating'))
+        ->where('category_id', $category->id)->where('is_active', true)->paginate(12);
     $categories = Category::with('parent')->orderBy('parent_id')->orderBy('name')->get();
     return view('Customer.products', compact('products', 'categories', 'category'));
 })->name('categories.show');
 
 // Danh sách hoa & Tìm kiếm
 Route::get('/san-pham', function () {
-    $query = Product::where('is_active', true);
+    $query = Product::withSalesMetrics()->where('is_active', true);
 
     if (request()->filled('category')) {
         $query->where('category_id', request('category'));
@@ -87,11 +96,11 @@ Route::get('/san-pham', function () {
     }
 
     if (is_numeric(request('min_price'))) {
-        $query->where('price', '>=', max(0, (float) request('min_price')));
+        $query->whereRaw('CASE WHEN sale_price > 0 AND sale_price < price THEN sale_price ELSE price END >= ?', [max(0, (int) round((float) request('min_price')))]);
     }
 
     if (is_numeric(request('max_price'))) {
-        $query->where('price', '<=', max(0, (float) request('max_price')));
+        $query->whereRaw('CASE WHEN sale_price > 0 AND sale_price < price THEN sale_price ELSE price END <= ?', [max(0, (int) round((float) request('max_price')))]);
     }
 
     if (in_array(request('season'), Product::SEASONS, true)) {
@@ -106,12 +115,33 @@ Route::get('/san-pham', function () {
         $query->whereNotNull('sale_price')->whereColumn('sale_price', '<', 'price');
     }
 
-    match (request('sort')) {
-        'price_asc' => $query->orderBy('price'),
-        'price_desc' => $query->orderByDesc('price'),
-        'newest' => $query->latest(),
-        default => $query->orderBy('id'),
-    };
+    $reviewsEnabled = Schema::hasTable('product_reviews');
+    if ($reviewsEnabled) {
+        $query->withCount('publishedReviews')->withAvg('publishedReviews', 'rating');
+        if (is_numeric(request('min_rating')) && (float) request('min_rating') >= 1 && (float) request('min_rating') <= 5) {
+            $minimumRating = (float) request('min_rating');
+            $ratedProductIds = DB::table('product_reviews')->select('product_id')
+                ->where('status', 'published')->whereNotNull('published_at')
+                ->groupBy('product_id')
+                ->havingRaw('AVG(rating) >= CAST(? AS DECIMAL(5, 2))', [$minimumRating]);
+            $query->whereIn('products.id', $ratedProductIds);
+        }
+    }
+
+    if (request('sort') === 'bestselling') {
+        $query->orderByDesc('display_sold_quantity')->orderByDesc('display_sold_order_count')->orderBy('products.id');
+    } elseif ($reviewsEnabled && request('sort') === 'top_rated') {
+        $query->orderByDesc('published_reviews_avg_rating')->orderByDesc('published_reviews_count');
+    } elseif ($reviewsEnabled && request('sort') === 'most_reviewed') {
+        $query->orderByDesc('published_reviews_count');
+    } else {
+        match (request('sort')) {
+            'price_asc' => $query->orderByRaw('CASE WHEN sale_price > 0 AND sale_price < price THEN sale_price ELSE price END')->orderBy('products.id'),
+            'price_desc' => $query->orderByRaw('CASE WHEN sale_price > 0 AND sale_price < price THEN sale_price ELSE price END DESC')->orderBy('products.id'),
+            'newest' => $query->latest(),
+            default => $query->orderBy('id'),
+        };
+    }
 
     $products = $query->paginate(12)->withQueryString();
     $categories = Category::with('parent')->orderBy('parent_id')->orderBy('name')->get();
@@ -124,12 +154,35 @@ Route::get('/products', function () {
 
 // Chi tiết hoa
 $showProduct = function ($slug) {
-    $product = Product::where('slug', $slug)->orWhere('id', $slug)->firstOrFail();
-    $relatedProducts = Product::where('category_id', $product->category_id)
+    $product = Product::withSalesMetrics()
+        ->when(Schema::hasTable('product_reviews'), fn ($query) => $query->withCount('publishedReviews')->withAvg('publishedReviews', 'rating'))
+        ->where('slug', $slug)->orWhere('id', $slug)->firstOrFail();
+    $relatedProducts = Product::withSalesMetrics()
+        ->when(Schema::hasTable('product_reviews'), fn ($query) => $query->withCount('publishedReviews')->withAvg('publishedReviews', 'rating'))
+        ->where('category_id', $product->category_id)
         ->where('id', '!=', $product->id)
         ->take(4)
         ->get();
-    return view('Customer.product-detail', compact('product', 'relatedProducts'));
+    $reviews = Schema::hasTable('product_reviews')
+        ? $product->publishedReviews()->latest('published_at')->paginate(10, ['*'], 'reviews_page')
+        : collect();
+    $reviewSummary = Schema::hasTable('product_reviews')
+        ? $product->publishedReviews()->selectRaw('COUNT(*) as review_count, AVG(rating) as average_rating')->first()
+        : (object) ['review_count' => 0, 'average_rating' => null];
+    $customer = auth()->user();
+    $isReviewCustomer = $customer && $customer->role === 'customer' && $customer->is_active;
+    $reviewPolicyReady = Schema::hasTable('product_review_negative_events');
+    $existingReview = $isReviewCustomer && Schema::hasTable('product_reviews')
+        ? ProductReview::query()->where('product_id', $product->id)->where(function ($query) use ($customer) {
+            $query->where('user_id', $customer->id)->orWhereRaw('LOWER(reviewer_email) = ?', [mb_strtolower(trim((string) $customer->email))]);
+        })->first()
+        : null;
+    $alreadyReviewed = (bool) $existingReview;
+    $reviewHistoryReady = Schema::hasTable('product_review_revisions');
+    $canReview = $isReviewCustomer && $reviewPolicyReady && Schema::hasTable('product_reviews')
+        && (! $alreadyReviewed || $reviewHistoryReady);
+
+    return view('Customer.product-detail', compact('product', 'relatedProducts', 'reviews', 'reviewSummary', 'isReviewCustomer', 'alreadyReviewed', 'canReview', 'reviewPolicyReady', 'existingReview', 'reviewHistoryReady'));
 };
 
 Route::get('/san-pham/{slug}', $showProduct)->name('product.detail');
@@ -138,7 +191,9 @@ Route::get('/chi-tiet-hoa/{slug}', $showProduct)->name('products.show');
 // Yêu thích sản phẩm
 Route::get('/yeu-thich', function () {
     $favoriteIds = session()->get('favorites', []);
-    $products = Product::where('is_active', true)
+    $products = Product::withSalesMetrics()
+        ->when(Schema::hasTable('product_reviews'), fn ($query) => $query->withCount('publishedReviews')->withAvg('publishedReviews', 'rating'))
+        ->where('is_active', true)
         ->when(!empty($favoriteIds), function ($query) use ($favoriteIds) {
             $query->whereIn('id', $favoriteIds);
         })
@@ -223,33 +278,30 @@ Route::post('/shipping/save', [ShippingController::class, 'save'])->name('shippi
 
 /*
 |--------------------------------------------------------------------------
-| PHÂN HỆ THANH TOÁN & PAYPAL (TV4) - BẮT BUỘC ĐĂNG NHẬP
+| CHECKOUT, PAYPAL VÀ THEO DÕI ĐƠN KHÁCH
 |--------------------------------------------------------------------------
 */
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'customer'])->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::get('/mua-ngay', [CheckoutController::class, 'buyNow'])->name('buy-now.checkout');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::post('/checkout/process', [CheckoutController::class, 'store'])->name('checkout.process');
     Route::get('/thanh-toan', [CheckoutController::class, 'index'])->name('checkout');
-
-    // Route thanh toán PayPal
     Route::get('/paypal/create/{order}', [CheckoutController::class, 'paypalCreate'])->name('paypal.create');
     Route::get('/paypal/success', [CheckoutController::class, 'paypalSuccess'])->name('paypal.success');
     Route::get('/paypal/cancel', [CheckoutController::class, 'paypalCancel'])->name('paypal.cancel');
+    Route::post('/san-pham/{product}/danh-gia', [ProductReviewController::class, 'store'])->middleware('throttle:5,60')->name('products.reviews.store');
+    Route::put('/san-pham/{product}/danh-gia', [ProductReviewController::class, 'update'])->middleware('throttle:5,60')->name('products.reviews.update');
+    Route::post('/san-pham/danh-gia/{review}/bao-cao', [ProductReviewController::class, 'report'])->middleware('throttle:5,60')->name('products.reviews.report');
+});
+Route::get('/don-hang/{order}/guest/{token}', [GuestOrderController::class, 'show'])->where('token', '[A-Za-z0-9]{64}')->name('guest.orders.show');
 
-    // Trang xem đơn hàng sau khi đặt thành công
+Route::middleware('auth')->group(function () {
     Route::get('/orders/{order}', [CustomerOrderController::class, 'show'])->name('orders.show');
-
-    // Xem danh sách và theo dõi đơn hàng của khách hàng (UC14)
     Route::get('/don-hang-cua-toi', function () {
-        $orders = Order::where('user_id', auth()->id())
-            ->with(['orderItems.product', 'deliverySlot'])
-            ->latest()
-            ->paginate(10);
+        $orders = Order::where('user_id', auth()->id())->with(['orderItems.product', 'deliverySlot'])->latest()->paginate(10);
         return view('Customer.orders', compact('orders'));
     })->name('customer.orders');
-
     Route::get('/yeu-cau-cua-toi', [CustomerCustomOrderController::class, 'index'])->name('customer.custom-orders.index');
     Route::get('/yeu-cau-cua-toi/{customOrderRequest}', [CustomerCustomOrderController::class, 'show'])->name('customer.custom-orders.show');
 });
@@ -288,24 +340,60 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         // 1. Đơn thanh toán online thành công (payment_status = 'paid')
         // 2. Đơn COD đã hoàn thành/đã giao (COMPLETED / DELIVERED)
         // 3. Đơn đã duyệt (CONFIRMED)
-        $totalRevenue = Order::where(function ($query) {
-            $query->where('payment_status', 'paid')
-                ->orWhereIn('status', ['COMPLETED', 'completed', 'DELIVERED', 'delivered', 'CONFIRMED', 'confirmed'])
-                ->orWhereIn('order_status', ['completed', 'delivered', 'confirmed']);
-        })
-            ->sum(DB::raw('COALESCE(total_amount, total, 0)'));
+        $effectiveStatuses = [];
+        foreach (['order_status', 'status'] as $field) {
+            if (Schema::hasColumn('orders', $field)) {
+                $effectiveStatuses[] = $field === 'order_status' ? "NULLIF({$field}, '')" : $field;
+            }
+        }
+        $effectiveStatus = 'LOWER(COALESCE(' . implode(', ', $effectiveStatuses ?: ['NULL']) . ", ''))";
+        $orderTotal = Schema::hasColumn('orders', 'total_amount')
+            ? 'COALESCE(NULLIF(total_amount, 0), total, 0)'
+            : 'COALESCE(total, 0)';
+        $totalRevenue = Order::query()->financiallyValid()->where(function ($query) use ($effectiveStatus, $effectiveStatuses) {
+            $hasCondition = false;
+            if (Schema::hasColumn('orders', 'payment_status')) {
+                $query->whereRaw("LOWER(COALESCE(payment_status, '')) = 'paid'");
+                $hasCondition = true;
+            }
+            if ($effectiveStatuses) {
+                $method = $hasCondition ? 'orWhereRaw' : 'whereRaw';
+                $query->{$method}("{$effectiveStatus} IN ('completed', 'delivered', 'confirmed')");
+                $hasCondition = true;
+            }
+            if (! $hasCondition) {
+                $query->whereRaw('0 = 1');
+            }
+        })->sum(DB::raw($orderTotal));
 
         $totalOrders = Order::count();
 
         // Đếm số đơn đang chờ xử lý & cắm hoa
         $pendingOrders = Order::where(function ($query) {
-            $query->whereIn('status', ['PENDING', 'pending', 'PREPARING', 'preparing', 'processing'])
-                ->orWhereIn('order_status', ['pending', 'preparing', 'processing']);
+            $hasCondition = false;
+            if (Schema::hasColumn('orders', 'status')) {
+                $query->whereIn('status', ['PENDING', 'pending', 'PREPARING', 'preparing', 'processing']);
+                $hasCondition = true;
+            }
+            if (Schema::hasColumn('orders', 'order_status')) {
+                $method = $hasCondition ? 'orWhereIn' : 'whereIn';
+                $query->{$method}('order_status', ['pending', 'preparing', 'processing']);
+                $hasCondition = true;
+            }
+            if (! $hasCondition) {
+                $query->whereRaw('0 = 1');
+            }
         })->count();
 
         $totalProducts = Product::count();
         $totalCustomers = User::where('role', 'customer')->count();
         $recentOrders = Order::with('user')->latest()->take(5)->get();
+        $bestSellingProducts = Product::withSalesMetrics()
+            ->orderByDesc('display_sold_quantity')
+            ->orderByDesc('display_sold_order_count')
+            ->orderBy('products.id')
+            ->limit(5)
+            ->get();
 
         return view('admin.dashboard', compact(
             'totalRevenue',
@@ -313,7 +401,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
             'pendingOrders',
             'totalProducts',
             'totalCustomers',
-            'recentOrders'
+            'recentOrders',
+            'bestSellingProducts'
         ));
     })->name('dashboard');
 
@@ -322,6 +411,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::resource('categories', AdminCategoryController::class);
     Route::resource('products', AdminProductController::class);
+    Route::get('/reviews', [AdminProductReviewController::class, 'index'])->name('reviews.index');
+    Route::put('/reviews/{review}', [AdminProductReviewController::class, 'update'])->name('reviews.update');
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.update-status');

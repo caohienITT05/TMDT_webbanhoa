@@ -55,8 +55,8 @@ class ChecklistCompletionTest extends TestCase
             'category_id' => $category->id,
             'name' => 'Hoa xuân đang giảm giá',
             'slug' => 'hoa-xuan-dang-giam-gia',
-            'price' => 400000,
-            'sale_price' => 320000,
+            'price' => 450000,
+            'sale_price' => 400000,
             'season' => 'spring',
             'stock' => 5,
         ]);

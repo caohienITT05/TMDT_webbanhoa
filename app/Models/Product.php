@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
+use App\Support\FinanceDateRange;
 
 class Product extends Model
 {
@@ -80,16 +84,14 @@ class Product extends Model
         };
     }
 
-    /**
-     * Lấy URL ảnh (nếu chưa có ảnh thì hiển thị ảnh mẫu mặc định)
-     */
-    public function getImageUrlAttribute(): string
+    /** Return this product's public image URL, or null when its file is unavailable. */
+    public function getImageUrlAttribute(): ?string
     {
-        if ($this->image && file_exists(public_path('storage/' . $this->image))) {
+        if ($this->image && Storage::disk('public')->exists($this->image)) {
             return asset('storage/' . $this->image);
         }
 
-        return 'https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=500&auto=format&fit=crop&q=60';
+        return null;
     }
 
     public function category(): BelongsTo
@@ -100,6 +102,50 @@ class Product extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /** Add sales totals sourced only from this product's real order-item rows. */
+    public function scopeWithSalesMetrics(Builder $query, ?string $from = null, ?string $to = null): Builder
+    {
+        $hasLegacyStatus = Schema::hasColumn('orders', 'status');
+        $hasPaymentStatus = Schema::hasColumn('orders', 'payment_status');
+        $effectiveStatus = "LOWER(COALESCE(NULLIF(sales_orders.order_status, ''), " . ($hasLegacyStatus ? 'sales_orders.status' : 'NULL') . ", ''))";
+        $invalidStatuses = "'" . implode("','", Order::SALES_INVALID_STATUSES) . "'";
+        $validOrders = DB::table('order_items as sales_items')
+            ->join('orders as sales_orders', 'sales_orders.id', '=', 'sales_items.order_id')
+            ->whereColumn('sales_items.product_id', 'products.id')
+            ->whereRaw("LOWER(COALESCE(sales_orders.order_status, '')) NOT IN ({$invalidStatuses})");
+        if ($hasLegacyStatus) {
+            $validOrders->whereRaw("LOWER(COALESCE(sales_orders.status, '')) NOT IN ({$invalidStatuses})");
+        }
+        if ($hasPaymentStatus) {
+            $validOrders->whereRaw("LOWER(COALESCE(sales_orders.payment_status, '')) NOT IN ({$invalidStatuses})");
+        }
+        if ($from !== null && $to !== null) {
+            [$start, $endExclusive] = FinanceDateRange::utcBounds($from, $to);
+            $validOrders->where('sales_orders.created_at', '>=', $start)->where('sales_orders.created_at', '<', $endExclusive);
+        }
+        $completedOrders = (clone $validOrders)->whereRaw("{$effectiveStatus} IN ('completed','delivered')");
+
+        return $query->addSelect([
+            'sold_quantity' => (clone $completedOrders)->selectRaw('COALESCE(SUM(sales_items.quantity), 0)'),
+            'sold_order_count' => (clone $completedOrders)->selectRaw('COUNT(DISTINCT sales_items.order_id)'),
+            'ordered_quantity' => (clone $validOrders)->selectRaw('COALESCE(SUM(sales_items.quantity), 0)'),
+            'ordered_order_count' => (clone $validOrders)->selectRaw('COUNT(DISTINCT sales_items.order_id)'),
+            // Storefront demand counts all active placed orders, separate from recognized revenue.
+            'display_sold_quantity' => (clone $validOrders)->selectRaw('COALESCE(SUM(sales_items.quantity), 0)'),
+            'display_sold_order_count' => (clone $validOrders)->selectRaw('COUNT(DISTINCT sales_items.order_id)'),
+        ]);
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    public function publishedReviews(): HasMany
+    {
+        return $this->reviews()->where('status', 'published')->whereNotNull('published_at');
     }
 
     public function costHistories(): HasMany

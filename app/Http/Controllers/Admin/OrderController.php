@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Services\FinanceAnalyticsService;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
@@ -49,7 +51,7 @@ class OrderController extends Controller
     /**
      * Cập nhật trạng thái đơn hàng và đồng bộ doanh thu.
      */
-    public function updateStatus(Request $request, Order $order, FinanceAnalyticsService $finance)
+    public function updateStatus(Request $request, Order $order, FinanceAnalyticsService $finance, InventoryService $inventory)
     {
         $oldStatus = strtolower((string) ($order->order_status ?: $order->status));
         // Chấp nhận cả giá trị gửi lên từ trường status hoặc order_status
@@ -67,24 +69,44 @@ class OrderController extends Controller
         $statusLower = strtolower($validated['order_status']);
         $statusUpper = strtoupper($statusLower);
 
+        if (in_array($statusLower, ['completed', 'delivered'], true)
+            && strtolower((string) $order->payment_method) === 'paypal'
+            && strtolower((string) $order->payment_status) !== 'paid') {
+            return redirect()->back()->with(
+                'error',
+                'Không thể hoàn tất đơn PayPal khi PayPal chưa xác nhận Capture thành công.'
+            );
+        }
+
         // Chuẩn bị dữ liệu cập nhật đồng bộ cả 2 cột
         $updateData = [
             'order_status' => $statusLower,
             'status' => $statusUpper,
         ];
 
-        // Nếu chuyển sang hoàn tất/giao thành công: tự động xác nhận đã thu tiền
+        // COD được xác nhận đã thu khi đơn hoàn tất. PayPal chỉ được đánh dấu
+        // paid bởi callback đã đối chiếu Capture COMPLETED.
         if (in_array($statusLower, ['completed', 'delivered'])) {
-            $updateData['payment_status'] = 'paid';
+            if (strtolower((string) $order->payment_method) !== 'paypal') {
+                $updateData['payment_status'] = 'paid';
 
-            // Cập nhật bản ghi giao dịch trong bảng payments nếu có
-            Payment::where('order_id', $order->id)->update([
-                'status' => 'completed',
-                'paid_at' => now(),
-            ]);
+                // Cập nhật bản ghi giao dịch trong bảng payments nếu có
+                Payment::where('order_id', $order->id)->update([
+                    'status' => 'completed',
+                    'paid_at' => now(),
+                ]);
+            }
         }
 
-        $order->update($updateData);
+        DB::transaction(function () use ($order, $updateData, $statusLower, $oldStatus, $inventory): void {
+            $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
+            $lockedOrder->update($updateData);
+
+            if ($statusLower === 'cancelled' && $oldStatus !== 'cancelled') {
+                $inventory->releaseForCancellation($lockedOrder->fresh(), $oldStatus);
+            }
+        });
+        $order->refresh();
 
         if ($oldStatus !== 'completed' && $statusLower === 'completed') {
             $finance->finalizeOrderFinancials($order->fresh());

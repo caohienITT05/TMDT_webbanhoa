@@ -77,6 +77,11 @@
                                 <input id="recipient_name" type="text" name="recipient_name" class="bloom-input h-11 w-full px-3" required value="{{ old('recipient_name', auth()->user()->name ?? '') }}" placeholder="Ví dụ: Nguyễn Thị Lan">
                                 @error('recipient_name') <p class="bloom-field-error">{{ $message }}</p> @enderror
                             </div>
+                            <div class="sm:col-span-2">
+                                <label class="bloom-label" for="recipient_email">Email liên hệ bổ sung (không bắt buộc)</label>
+                                <input id="recipient_email" type="email" name="recipient_email" class="bloom-input h-11 w-full px-3" value="{{ old('recipient_email', auth()->user()?->email ?? '') }}" autocomplete="email">
+                                @error('recipient_email') <p class="bloom-field-error">{{ $message }}</p> @enderror
+                            </div>
                             <div>
                                 <label class="bloom-label" for="recipient_phone">Số điện thoại liên hệ <span class="text-bloom-danger">*</span></label>
                                 <input id="recipient_phone" type="text" name="recipient_phone" class="bloom-input h-11 w-full px-3" required value="{{ old('recipient_phone') }}" placeholder="0988xxxxxx">

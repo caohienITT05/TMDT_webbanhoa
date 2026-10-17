@@ -6,6 +6,7 @@ use App\Services\GiftAdvisor\WebSearchService;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CreatesBloomGiftData;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,6 +15,134 @@ class GiftAdvisorTest extends TestCase
 {
     use CreatesBloomGiftData, RefreshDatabase {
         CreatesBloomGiftData::afterRefreshingDatabase insteadof RefreshDatabase;
+    }
+
+    public function test_ai_cards_keep_each_product_image_tied_to_its_product_id_for_three_and_five_items(): void
+    {
+        Storage::fake('public');
+        $products = collect(range(1, 5))->map(function (int $number) {
+            $image = "products/ai-image-{$number}.jpg";
+            Storage::disk('public')->put($image, "product-image-{$number}");
+
+            return $this->createProduct([
+                'name' => "Bó hoa mẫu {$number}",
+                'slug' => "bo-hoa-mau-{$number}",
+                'price' => 100000 * $number,
+                'image' => $image,
+            ]);
+        });
+
+        $retrieval = app(\App\Services\GiftAdvisor\ProductRetrievalService::class);
+        $cards = $retrieval->productsByIds($products->pluck('id')->all())
+            ->map(fn ($product) => $retrieval->card($product, []));
+
+        $this->assertCount(5, $cards);
+        $this->assertSame($products->pluck('id')->all(), $cards->pluck('product_id')->all());
+        $this->assertSame($products->pluck('name')->all(), $cards->pluck('name')->all());
+        $this->assertSame(
+            $products->map(fn ($product, int $index) => asset('storage/products/ai-image-' . ($index + 1) . '.jpg'))->all(),
+            $cards->pluck('image_url')->all()
+        );
+        $this->assertCount(5, $cards->pluck('image_url')->unique());
+
+        $threeCards = $cards->take(3);
+        $this->assertSame($products->take(3)->pluck('id')->all(), $threeCards->pluck('product_id')->all());
+        $this->assertSame(
+            $products->take(3)->map(fn ($product, int $index) => asset('storage/products/ai-image-' . ($index + 1) . '.jpg'))->all(),
+            $threeCards->pluck('image_url')->all()
+        );
+    }
+
+    public function test_missing_or_unavailable_product_image_does_not_use_a_shared_product_photo(): void
+    {
+        Storage::fake('public');
+        $product = $this->createProduct([
+            'name' => 'Bó hoa chưa có ảnh',
+            'slug' => 'bo-hoa-chua-co-anh',
+            'image' => 'products/missing.jpg',
+        ]);
+
+        $this->assertNull($product->fresh()->image_url);
+        $retrieval = app(\App\Services\GiftAdvisor\ProductRetrievalService::class);
+        $card = $retrieval->card($product->fresh(), []);
+        $this->assertSame($product->id, $card['product_id']);
+        $this->assertSame($product->name, $card['name']);
+        $this->assertNull($card['image_url']);
+    }
+
+    public function test_mocked_openrouter_response_keeps_three_product_images_bound_to_the_returned_ids(): void
+    {
+        Storage::fake('public');
+        $products = collect(range(1, 3))->map(function (int $number) {
+            $image = "products/openrouter-image-{$number}.jpg";
+            Storage::disk('public')->put($image, "openrouter-product-{$number}");
+            $product = $this->createProduct([
+                'name' => "Bó hoa tulip mẫu {$number}",
+                'slug' => "bo-hoa-tulip-mau-{$number}",
+                'price' => 200000 + 10000 * $number,
+                'image' => $image,
+                'stock' => 4,
+            ]);
+            $product->category()->update(['name' => 'Hoa']);
+
+            return $product;
+        });
+        $ordered = $products->reverse()->values();
+        $this->enableAi('openrouter');
+        Config::set('services.bloomgift_ai.model', 'openrouter/free');
+        Http::fake(['https://openrouter.ai/*' => Http::response(['choices' => [['message' => ['content' => json_encode([
+            'assistant_message' => 'Mình tìm được ba mẫu hoa phù hợp.',
+            'product_ids' => $ordered->pluck('id')->all(),
+            'custom_suggestions' => [],
+        ], JSON_UNESCAPED_UNICODE)]]]], 200)]);
+
+        $response = $this->advisor('Hoa tulip tặng sinh nhật')->assertOk()
+            ->assertJsonPath('provider.active', true)
+            ->assertJsonPath('recommendation_mode', 'online');
+
+        $cards = collect($response->json('in_store_suggestions'));
+        $this->assertSame($ordered->pluck('id')->all(), $cards->pluck('product_id')->all());
+        $this->assertSame($ordered->pluck('name')->all(), $cards->pluck('name')->all());
+        $this->assertSame(
+            $ordered->map(fn ($product) => asset('storage/' . $product->image))->all(),
+            $cards->pluck('image_url')->all()
+        );
+        Http::assertSentCount(1);
+        Http::assertNotSent(fn (ClientRequest $request): bool => str_contains($request->url(), 'api.openai.com'));
+    }
+
+    public function test_openrouter_429_fallback_keeps_each_returned_product_image_correct(): void
+    {
+        Storage::fake('public');
+        $products = collect(range(1, 3))->map(function (int $number) {
+            $image = "products/fallback-image-{$number}.jpg";
+            Storage::disk('public')->put($image, "fallback-product-{$number}");
+            $product = $this->createProduct([
+                'name' => "Bó hoa hồng mẫu {$number}",
+                'slug' => "bo-hoa-hong-mau-{$number}",
+                'price' => 250000 + 10000 * $number,
+                'image' => $image,
+                'stock' => 5,
+            ]);
+            $product->category()->update(['name' => 'Hoa']);
+
+            return $product;
+        });
+        $this->enableAi('openrouter');
+        Http::fake(['https://openrouter.ai/*' => Http::response(['error' => ['message' => 'Rate limit exceeded']], 429)]);
+
+        $response = $this->advisor('Hoa sinh nhật')->assertOk()
+            ->assertJsonPath('provider.active', false)
+            ->assertJsonPath('recommendation_mode', 'fallback');
+        $cards = collect($response->json('in_store_suggestions'));
+
+        $this->assertCount(3, $cards);
+        $this->assertSame($products->pluck('id')->all(), $cards->pluck('product_id')->all());
+        $this->assertSame(
+            $products->map(fn ($product) => asset('storage/' . $product->image))->all(),
+            $cards->pluck('image_url')->all()
+        );
+        Http::assertSentCount(1);
     }
 
     public function test_it_grounds_an_in_stock_product_in_bloomgift_data(): void
@@ -610,6 +739,28 @@ class GiftAdvisorTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_fallback_reply_personalizes_the_request_and_uses_live_product_name_and_price(): void
+    {
+        $product = $this->createProduct([
+            'name' => 'Bó tulip hồng Pastel Bloom',
+            'description' => 'Bó tulip hồng pastel phù hợp tặng người yêu dịp sinh nhật.',
+            'price' => 280000,
+            'stock' => 4,
+        ]);
+        Config::set('services.bloomgift_ai.driver', 'none');
+        Config::set('services.bloomgift_ai.api_key', null);
+
+        $response = $this->advisor('Hoa sinh nhật tặng người yêu khoảng 300.000đ')
+            ->assertOk()
+            ->assertJsonPath('recommendation_mode', 'fallback')
+            ->assertJsonPath('in_store_suggestions.0.product_id', $product->id);
+
+        $this->assertStringContainsString('sinh nhật', mb_strtolower($response->json('message')));
+        $this->assertStringContainsString('người yêu', mb_strtolower($response->json('message')));
+        $this->assertStringContainsString($product->name, $response->json('message'));
+        $this->assertStringContainsString('280.000đ', $response->json('message'));
+    }
+
     public function test_openrouter_retries_once_without_json_mode_when_model_rejects_it(): void
     {
         $this->enableAi('openrouter');
@@ -806,7 +957,7 @@ class GiftAdvisorTest extends TestCase
             $body = $response->streamedContent();
             $this->assertStringNotContainsString('Here are some thoughtful', $body);
             $this->assertStringNotContainsString('Dạ em', $body);
-            $this->assertStringContainsString('Mình đang tìm', $body);
+            $this->assertStringContainsString('dịp sinh nhật', mb_strtolower($body));
         }
     }
 

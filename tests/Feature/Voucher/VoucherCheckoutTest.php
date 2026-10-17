@@ -142,14 +142,38 @@ class VoucherCheckoutTest extends TestCase
         $customer = $this->createCustomer();
         $voucher = $this->createVoucher(['usage_limit' => 5]);
         $order = $this->createOrder($customer, ['payment_method' => 'paypal']);
-        $payment = $this->createPayment($order, ['payment_method' => 'paypal']);
+        $token = 'MOCK-ONE';
+        $payment = $this->createPayment($order, ['payment_method' => 'paypal', 'transaction_id' => $token]);
+        $usdAmount = number_format(round((float) $order->total / 26054, 2), 2, '.', '');
+        config()->set('services.paypal.merchant_id', 'MERCHANT-TEST-001');
         Http::fake([
             'https://paypal.test/v1/oauth2/token' => Http::response(['access_token' => 'access-token'], 200),
-            'https://paypal.test/v2/checkout/orders/MOCK-ONE/capture' => Http::response(['status' => 'COMPLETED'], 201),
+            'https://paypal.test/v2/checkout/orders/MOCK-ONE' => Http::response([
+                'id' => $token,
+                'intent' => 'CAPTURE',
+                'status' => 'APPROVED',
+                'purchase_units' => [[
+                    'reference_id' => $order->order_code,
+                    'amount' => ['currency_code' => 'USD', 'value' => $usdAmount],
+                    'payee' => ['merchant_id' => 'MERCHANT-TEST-001'],
+                ]],
+            ], 200),
+            'https://paypal.test/v2/checkout/orders/MOCK-ONE/capture' => Http::response([
+                'id' => $token,
+                'status' => 'COMPLETED',
+                'purchase_units' => [[
+                    'reference_id' => $order->order_code,
+                    'payments' => ['captures' => [[
+                        'id' => $token,
+                        'status' => 'COMPLETED',
+                        'amount' => ['currency_code' => 'USD', 'value' => $usdAmount],
+                    ]]],
+                ]],
+            ], 201),
         ]);
 
-        $first = $this->actingAs($customer)->withSession(['paypal_voucher_for_order_' . $order->id => $voucher->id])->get(route('paypal.success', ['order_id' => $order->id, 'token' => 'MOCK-ONE']));
-        $second = $this->actingAs($customer)->get(route('paypal.success', ['order_id' => $order->id, 'token' => 'MOCK-ONE']));
+        $first = $this->actingAs($customer)->withSession(['paypal_voucher_for_order_' . $order->id => $voucher->id])->get(route('paypal.success', ['order_id' => $order->id, 'token' => $token]));
+        $second = $this->actingAs($customer)->get(route('paypal.success', ['order_id' => $order->id, 'token' => $token]));
 
         $first->assertRedirect(route('orders.show', $order));
         $second->assertRedirect(route('orders.show', $order));
@@ -165,16 +189,39 @@ class VoucherCheckoutTest extends TestCase
         $customer = $this->createCustomer();
         $voucher = $this->createVoucher(['usage_limit' => 1]);
         $order = $this->createOrder($customer, ['payment_method' => 'paypal']);
-        $payment = $this->createPayment($order, ['payment_method' => 'paypal']);
+        $payment = $this->createPayment($order, ['payment_method' => 'paypal', 'transaction_id' => 'FAILED-CAPTURE']);
+        $usdAmount = number_format(round((float) $order->total / 26054, 2), 2, '.', '');
+        config()->set('services.paypal.merchant_id', 'MERCHANT-TEST-001');
         Http::fake([
             'https://paypal.test/v1/oauth2/token' => Http::response(['access_token' => 'access-token'], 200),
+            'https://paypal.test/v2/checkout/orders/FAILED-CAPTURE' => Http::sequence()
+                ->push([
+                    'id' => 'FAILED-CAPTURE',
+                    'intent' => 'CAPTURE',
+                    'status' => 'APPROVED',
+                    'purchase_units' => [[
+                        'reference_id' => $order->order_code,
+                        'amount' => ['currency_code' => 'USD', 'value' => $usdAmount],
+                        'payee' => ['merchant_id' => 'MERCHANT-TEST-001'],
+                    ]],
+                ], 200)
+                ->push([
+                    'id' => 'FAILED-CAPTURE',
+                    'intent' => 'CAPTURE',
+                    'status' => 'APPROVED',
+                    'purchase_units' => [[
+                        'reference_id' => $order->order_code,
+                        'amount' => ['currency_code' => 'USD', 'value' => $usdAmount],
+                        'payee' => ['merchant_id' => 'MERCHANT-TEST-001'],
+                    ]],
+                ], 200),
             'https://paypal.test/v2/checkout/orders/FAILED-CAPTURE/capture' => Http::response(['name' => 'UNPROCESSABLE_ENTITY'], 422),
         ]);
 
         $this->actingAs($customer)->withSession(['paypal_voucher_for_order_' . $order->id => $voucher->id])->get(route('paypal.success', [
             'order_id' => $order->id,
             'token' => 'FAILED-CAPTURE',
-        ]))->assertRedirect(route('checkout.index'));
+        ]))->assertRedirect(route('orders.show', $order));
 
         $this->assertDatabaseHas('vouchers', ['id' => $voucher->id, 'used_count' => 0]);
         $this->assertSame('pending', $payment->fresh()->status);

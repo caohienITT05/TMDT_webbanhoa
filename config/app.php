@@ -67,6 +67,9 @@ return [
 
     'timezone' => 'UTC',
 
+    // Keep instants in UTC; convert only when presenting dates to Vietnamese users.
+    'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'Asia/Ho_Chi_Minh'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

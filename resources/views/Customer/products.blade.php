@@ -68,6 +68,16 @@
                     <option value="price_asc" @selected(request('sort') === 'price_asc')>Giá tăng dần</option>
                     <option value="price_desc" @selected(request('sort') === 'price_desc')>Giá giảm dần</option>
                     <option value="newest" @selected(request('sort') === 'newest')>Mới nhất</option>
+                    <option value="bestselling" @selected(request('sort') === 'bestselling')>Bán chạy</option>
+                    <option value="top_rated" @selected(request('sort') === 'top_rated')>Đánh giá cao</option>
+                    <option value="most_reviewed" @selected(request('sort') === 'most_reviewed')>Nhiều đánh giá</option>
+                </select>
+            </div>
+            <div>
+                <label class="bloom-label" for="min-rating">Đánh giá tối thiểu</label>
+                <select id="min-rating" name="min_rating" class="bloom-select h-11 w-full">
+                    <option value="">Mọi mức đánh giá</option>
+                    @foreach([4, 3, 2, 1] as $rating)<option value="{{ $rating }}" @selected((string) request('min_rating') === (string) $rating)>Từ {{ $rating }} sao</option>@endforeach
                 </select>
             </div>
             <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:col-span-2 lg:col-span-3 xl:col-span-2">
@@ -76,7 +86,7 @@
             </div>
             <div class="flex gap-2">
                 <button type="submit" class="bloom-button flex-1 sm:flex-none">Lọc sản phẩm</button>
-                @if (request()->filled('search') || request()->filled('category') || request()->filled('min_price') || request()->filled('max_price') || request()->filled('season') || request()->boolean('in_stock') || request()->boolean('sale') || request()->filled('sort'))
+                @if (request()->filled('search') || request()->filled('category') || request()->filled('min_price') || request()->filled('max_price') || request()->filled('season') || request()->boolean('in_stock') || request()->boolean('sale') || request()->filled('sort') || request()->filled('min_rating'))
                     <a href="{{ route('products.index') }}" class="bloom-button bloom-button--ghost flex-1 sm:flex-none">Xóa lọc</a>
                 @endif
             </div>

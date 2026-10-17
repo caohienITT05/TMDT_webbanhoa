@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use App\Support\GuestCartSession;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -29,10 +30,10 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         // 1. Chuyển toàn bộ sản phẩm trong giỏ hàng tạm sang tài khoản vừa đăng nhập
-        $sessionId = session()->getId();
+        $sessionId = GuestCartSession::id();
         \App\Models\CartItem::where('session_id', $sessionId)
             ->whereNull('user_id')
-            ->update(['user_id' => $request->user()->id]);
+            ->update(['user_id' => $request->user()->id, 'session_id' => null]);
 
         // 2. Chuyển hướng đúng vai trò
         if ($request->user()->role === 'admin') {

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\CartItem;
+use App\Support\GuestCartSession;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,13 +42,20 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'role' => 'customer',
+            'is_active' => true,
         ]);
 
         event(new Registered($user));
 
         Auth::login($user);
+        $request->session()->regenerate();
 
-        // Thay vì redirect(route('dashboard')):
-        return redirect()->route('home')->with('success', 'Đăng ký tài khoản thành công!');
+        $sessionId = GuestCartSession::id();
+        CartItem::query()->where('session_id', $sessionId)
+            ->whereNull('user_id')
+            ->update(['user_id' => $user->id, 'session_id' => null]);
+
+        return redirect()->intended(route('home'))->with('success', 'Đăng ký tài khoản thành công!');
     }
 }

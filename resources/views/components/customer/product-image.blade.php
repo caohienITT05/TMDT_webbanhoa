@@ -2,8 +2,7 @@
 
 @php
     $name = $alt ?: ($product->name ?? 'Sản phẩm BloomGift');
-    $hasImage = ! empty($product?->image);
-    $image = $hasImage ? asset('storage/' . $product->image) : null;
+    $image = $product?->image_url;
     $initial = mb_strtoupper(mb_substr($name, 0, 1));
     $fallbacks = [
         'linear-gradient(145deg, #f8edeb 0%, #ecd9db 100%)',

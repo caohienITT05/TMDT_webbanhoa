@@ -13,23 +13,19 @@ class OrderConfirmationMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public Order $order)
+    public function __construct(public Order $order, public ?string $guestOrderUrl = null)
     {
         $this->order->loadMissing(['items', 'deliverySlot']);
     }
 
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: 'BloomGift đã nhận đơn hàng #' . ($this->order->order_code ?? $this->order->id),
-        );
+        return new Envelope(subject: 'BloomGift đã nhận đơn hàng #' . ($this->order->order_code ?? $this->order->id));
     }
 
     public function content(): Content
     {
-        return new Content(
-            view: 'emails.order_confirmation',
-        );
+        return new Content(view: 'emails.order_confirmation');
     }
 
     public function attachments(): array

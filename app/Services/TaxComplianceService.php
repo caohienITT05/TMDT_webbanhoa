@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Models\Order;
+use App\Support\FinanceDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class TaxComplianceService
 {
@@ -16,6 +18,7 @@ class TaxComplianceService
     public const ENTERPRISE_CIT_17_REVENUE = 50_000_000_000;
 
     public const CIT_STATUSES = [
+        'unconfigured' => 'Chưa cấu hình hồ sơ thuế',
         'estimated_exempt' => 'Dự kiến được miễn',
         'confirmed_exempt' => 'Đã xác nhận miễn',
         'taxable' => 'Thuộc diện chịu thuế',
@@ -42,24 +45,25 @@ class TaxComplianceService
 
     private function recognizedOrdersForYear(int $year): Collection
     {
-        return Order::query()->whereBetween('created_at', [
-            CarbonImmutable::create($year)->startOfYear(),
-            CarbonImmutable::create($year)->endOfYear(),
-        ])->get(['id', 'status', 'order_status', 'payment_status', 'total_amount', 'total'])
-            ->reject(function (Order $order) {
-                return in_array(strtolower((string) $order->status), ['cancelled', 'canceled'], true)
-                    || in_array(strtolower((string) $order->order_status), ['cancelled', 'canceled'], true);
-            })->filter(function (Order $order) {
+        [$start, $endExclusive] = FinanceDateRange::utcBounds($year.'-01-01', $year.'-12-31');
+
+        return Order::query()
+            ->financiallyValid()
+            ->where('created_at', '>=', $start)
+            ->where('created_at', '<', $endExclusive)
+            ->get(['id', 'status', 'order_status', 'payment_status', 'total_amount', 'total'])
+            ->filter(function (Order $order) {
+                $effectiveStatus = strtolower((string) ($order->order_status ?: $order->status));
+
                 return strtolower((string) $order->payment_status) === 'paid'
-                    || in_array(strtolower((string) $order->status), ['completed', 'delivered', 'confirmed'], true)
-                    || in_array(strtolower((string) $order->order_status), ['completed', 'delivered', 'confirmed'], true);
+                    || in_array($effectiveStatus, ['completed', 'delivered', 'confirmed'], true);
             });
     }
 
     public function recognizedRevenueForYear(int $year): float
     {
         return (float) $this->recognizedOrdersForYear($year)
-            ->sum(fn (Order $order) => (float) ($order->total_amount ?? $order->total));
+            ->sum(fn (Order $order) => (float) FinanceAnalyticsService::orderTotal($order));
     }
 
     public function corporateIncomeTaxEvaluation(?object $profile = null): array
@@ -67,16 +71,19 @@ class TaxComplianceService
         $profile ??= $this->profile();
         if (! $profile || $profile->entity_type !== 'enterprise') {
             return [
-                'status' => 'taxable',
-                'status_label' => self::CIT_STATUSES['taxable'],
-                'applicable_rate' => 20.0,
+                'status' => 'unconfigured',
+                'status_label' => self::CIT_STATUSES['unconfigured'],
+                'applicable_rate' => null,
                 'current_revenue' => null,
                 'projected_revenue' => null,
                 'actual_revenue' => null,
                 'prior_year_revenue' => null,
                 'assessment_revenue' => null,
                 'eligible' => false,
-                'reason' => 'Chưa có hồ sơ doanh nghiệp hợp lệ để đánh giá tự động.',
+                'cit_reduction_status' => 'not_applicable',
+                'cit_reduction_percent' => 0,
+                'cit_reduction_revenue' => null,
+                'reason' => 'Chưa có hồ sơ doanh nghiệp hợp lệ để xác định mức thuế hoặc ưu đãi.',
             ];
         }
 
@@ -95,6 +102,17 @@ class TaxComplianceService
         };
         $exempt = $eligible && $assessment <= self::ENTERPRISE_CIT_EXEMPT_REVENUE;
         $status = $exempt ? 'estimated_exempt' : 'taxable';
+        $taxYear = (int) $profile->tax_year;
+        $splitStatusAvailable = \Illuminate\Support\Facades\Schema::hasColumn('tax_profiles', 'is_split_from_large_enterprise');
+        $splitFromLargeEnterprise = $splitStatusAvailable ? $profile->is_split_from_large_enterprise : null;
+        $reductionRevenue = $actual ?? (float) $projected;
+        $citReductionStatus = match (true) {
+            ! in_array($taxYear, [2026, 2027], true) => 'not_applicable',
+            $reductionRevenue > 10_000_000_000 => 'over_revenue_limit',
+            $splitFromLargeEnterprise === null => 'needs_confirmation',
+            (bool) $splitFromLargeEnterprise => 'excluded_split',
+            default => 'eligible_estimate',
+        };
 
         return [
             'status' => $status,
@@ -106,6 +124,9 @@ class TaxComplianceService
             'prior_year_revenue' => $prior,
             'assessment_revenue' => $assessment,
             'eligible' => $eligible,
+            'cit_reduction_status' => $citReductionStatus,
+            'cit_reduction_percent' => $citReductionStatus === 'eligible_estimate' ? 30 : 0,
+            'cit_reduction_revenue' => $reductionRevenue,
             'reason' => $exempt
                 ? 'Doanh thu dùng để đánh giá chưa vượt 1 tỷ đồng và hồ sơ demo đang đáp ứng điều kiện miễn.'
                 : ($eligible ? 'Doanh thu hoặc kết quả quyết toán không còn thuộc ngưỡng miễn 1 tỷ đồng.' : 'Hồ sơ có điều kiện loại trừ nên không tự áp dụng miễn thuế hoặc mức 15%/17%.'),
@@ -144,8 +165,8 @@ class TaxComplianceService
             'mapped_products' => $mappedProducts,
             'unclassified_products' => max(0, $productCount - $mappedProducts),
             'einvoice_order_count' => $recognizedOrders,
-            'cit_reference' => 'Luật 67/2025/QH15; Nghị định 320/2025/NĐ-CP; Nghị định 141/2026/NĐ-CP',
-            'vat_reference' => 'Luật 48/2024/QH15; Nghị quyết 204/2025/QH15',
+            'cit_reference' => 'Luật 67/2025/QH15, sửa đổi bởi Luật 09/2026/QH16; Nghị định 320/2025/NĐ-CP; Nghị định 141/2026/NĐ-CP; Nghị quyết 43/2026/QH16',
+            'vat_reference' => 'Luật 48/2024/QH15, sửa đổi bởi Luật 09/2026/QH16 và Luật 149/2025/QH15; Nghị quyết 204/2025/QH15',
             'einvoice_reference' => 'Nghị định 70/2025/NĐ-CP về hóa đơn điện tử',
         ];
     }
@@ -164,6 +185,7 @@ class TaxComplianceService
             'estimated_indirect_tax_base' => null,
             'cit_status' => null,
             'cit_rate' => null,
+            'unclassified_indirect_tax_base' => null,
         ];
         if ($types->isEmpty()) {
             return $empty;
@@ -208,7 +230,16 @@ class TaxComplianceService
             $rule = $covering->first();
             if ($rule->calculation_method === 'catalog_vat_2026') {
                 $catalogVat ??= $this->estimateCatalogOutputVat($from, $to);
-                $amounts[$category]['estimated'] += $catalogVat['tax'];
+                if ($catalogVat['tax'] === null) {
+                    $amounts[$category]['estimated_complete'] = false;
+                } else {
+                    $amounts[$category]['estimated'] += $catalogVat['tax'];
+                }
+                continue;
+            }
+
+            if ($rule->calculation_method === 'corporate_income_2026' && $evaluation['status'] === 'unconfigured') {
+                $amounts[$category]['estimated_complete'] = false;
 
                 continue;
             }
@@ -220,17 +251,22 @@ class TaxComplianceService
                 continue;
             }
             $rate = (float) $rule->rate;
+            $reductionPercent = 0;
             if ($rule->calculation_method === 'corporate_income_2026') {
                 if ($evaluation['status'] === 'estimated_exempt' || $evaluation['status'] === 'confirmed_exempt') {
                     $amounts[$category]['estimated'] += 0;
-
                     continue;
                 }
                 $rate = $evaluation['applicable_rate'];
+                $reductionPercent = $evaluation['cit_reduction_percent'] ?? 0;
             }
-            $amounts[$category]['estimated'] += $rule->calculation_method === 'inclusive'
+            $estimatedAmount = $rule->calculation_method === 'inclusive'
                 ? (int) round(max(0, $base) * $rate / (100 + $rate))
                 : (int) round(max(0, $base) * $rate / 100);
+            if ($reductionPercent > 0) {
+                $estimatedAmount = (int) round($estimatedAmount * (100 - $reductionPercent) / 100);
+            }
+            $amounts[$category]['estimated'] += $estimatedAmount;
         }
 
         $value = static function (array $bucket, string $kind): ?int {
@@ -243,6 +279,7 @@ class TaxComplianceService
             'estimated_indirect_tax' => $value($amounts['indirect'], 'estimated'),
             'actual_indirect_tax' => $value($amounts['indirect'], 'actual'),
             'estimated_indirect_tax_base' => $catalogVat['taxable_base'] ?? null,
+            'unclassified_indirect_tax_base' => $catalogVat['unclassified_base'] ?? null,
             'cit_status' => $evaluation['status'],
             'cit_rate' => $evaluation['applicable_rate'],
         ];
@@ -252,16 +289,30 @@ class TaxComplianceService
     {
         $profile = $this->profile();
         if (! $profile) {
-            return ['tax' => 0, 'taxable_base' => 0, 'unclassified_base' => 0];
+            return ['tax' => null, 'taxable_base' => null, 'unclassified_base' => null, 'complete' => false];
         }
 
-        $orders = Order::with('items')->whereBetween('created_at', [
-            CarbonImmutable::parse($from)->startOfDay(),
-            CarbonImmutable::parse($to)->endOfDay(),
-        ])->where('order_status', 'completed')->get();
+        [$start, $endExclusive] = FinanceDateRange::utcBounds($from, $to);
+        $orders = Order::with('items')
+            ->where('created_at', '>=', $start)
+            ->where('created_at', '<', $endExclusive)
+            ->completedOrDelivered()
+            ->get();
         $mappings = DB::table('product_tax_profiles')->get()->keyBy('product_id');
+        $policyRules = Schema::hasTable('vat_policy_rules')
+            ? DB::table('vat_policy_rules')->get()->map(function ($rule) {
+                $rule->product_ids = json_decode((string) ($rule->product_ids ?? '[]'), true) ?: [];
+
+                return $rule;
+            })
+            : collect();
+        $productIds = $orders->flatMap(fn ($order) => $order->items->pluck('product_id'))->filter()->unique()->values();
+        $productCategories = $productIds->isEmpty()
+            ? collect()
+            : DB::table('products')->whereIn('id', $productIds)->pluck('category_id', 'id');
         $groups = [];
         $unclassifiedBase = 0;
+        $hasUnclassifiedAmount = false;
 
         $addBase = static function (array &$groups, float $rate, bool $included, int $base): void {
             $key = number_format($rate, 4, '.', '').'|'.($included ? '1' : '0');
@@ -283,28 +334,82 @@ class TaxComplianceService
                     ? $remaining
                     : min($remaining, (int) round($netTotal * ($grossTotal > 0 ? $line['gross'] / $grossTotal : 0)));
                 $remaining -= $base;
-                $mapping = $mappings->get($line['item']->product_id);
+                $productId = (int) $line['item']->product_id;
+                $categoryId = $productCategories->get($productId);
+                $orderDate = $order->created_at_local->toDateString();
+                $legacyMapping = $mappings->get($productId);
+                $legacyMappingActive = $legacyMapping
+                    && $legacyMapping->effective_from <= $orderDate
+                    && ($legacyMapping->effective_to === null || $legacyMapping->effective_to >= $orderDate);
+                $matchingRules = $policyRules->filter(function ($rule) use ($productId, $categoryId, $orderDate): bool {
+                    if ($rule->effective_from > $orderDate || ($rule->effective_to !== null && $rule->effective_to < $orderDate)) {
+                        return false;
+                    }
+
+                    return match ($rule->scope) {
+                        'products' => in_array($productId, array_map('intval', $rule->product_ids), true),
+                        'category' => $categoryId !== null && (int) $rule->category_id === (int) $categoryId,
+                        'store' => true,
+                        default => false,
+                    };
+                });
+                $specificity = ['store' => 1, 'category' => 2, 'products' => 3];
+                $selectedRule = null;
+                $ruleConflict = false;
+                if ($matchingRules->isNotEmpty()) {
+                    $highest = $matchingRules->max(fn ($rule) => $specificity[$rule->scope] ?? 0);
+                    if ($highest < 3 && $legacyMappingActive) {
+                        $selectedRule = $legacyMapping;
+                    } else {
+                        $mostSpecific = $matchingRules->filter(fn ($rule) => ($specificity[$rule->scope] ?? 0) === $highest)
+                            ->sortByDesc('effective_from')->values();
+                        $latestDate = $mostSpecific->first()->effective_from;
+                        $latestRules = $mostSpecific->filter(fn ($rule) => $rule->effective_from === $latestDate);
+                        $ruleConflict = $latestRules->count() > 1;
+                        $selectedRule = $ruleConflict ? null : $latestRules->first();
+                    }
+                } elseif ($legacyMappingActive) {
+                    $selectedRule = $legacyMapping;
+                }
+
+                if ($ruleConflict) {
+                    $unclassifiedBase += $base;
+                    $hasUnclassifiedAmount = true;
+                    continue;
+                }
+
+                $mapping = $selectedRule;
                 $mappingActive = $mapping
-                    && $mapping->effective_from <= $order->created_at->toDateString()
-                    && ($mapping->effective_to === null || $mapping->effective_to >= $order->created_at->toDateString());
+                    && $mapping->effective_from <= $orderDate
+                    && ($mapping->effective_to === null || $mapping->effective_to >= $orderDate);
                 if ($mappingActive) {
                     $preset = self::VAT_CATEGORIES[$mapping->vat_category] ?? self::VAT_CATEGORIES['custom'];
                     $rate = $mapping->vat_category === 'custom' ? (float) $mapping->vat_rate : (float) $preset['rate'];
                     $included = (bool) $mapping->price_includes_vat;
                 } else {
-                    $rate = (float) $profile->default_vat_rate;
-                    $included = (bool) $profile->prices_include_vat;
                     $unclassifiedBase += $base;
+                    $hasUnclassifiedAmount = true;
+                    continue;
                 }
                 $addBase($groups, $rate, $included, $base);
             }
 
-            $addBase(
-                $groups,
-                (float) $profile->default_vat_rate,
-                (bool) $profile->prices_include_vat,
-                self::cents($order->shipping_fee)
-            );
+            $shippingIncome = self::cents($order->shipping_fee);
+            $giftFeesKnown = $order->gift_card_fee !== null && $order->gift_wrap_fee !== null;
+            $giftServiceIncome = $giftFeesKnown
+                ? self::cents($order->gift_card_fee) + self::cents($order->gift_wrap_fee)
+                : 0;
+            $unallocated = self::cents(FinanceAnalyticsService::orderTotal($order)) - $netTotal - $shippingIncome - $giftServiceIncome;
+            if ($giftServiceIncome > 0) {
+                $unclassifiedBase += $giftServiceIncome;
+                $hasUnclassifiedAmount = true;
+            }
+            if ($unallocated !== 0 || ! $giftFeesKnown && $unallocated > 0) {
+                $unclassifiedBase += max(0, $unallocated);
+                $hasUnclassifiedAmount = true;
+            }
+
+            $addBase($groups, (float) $profile->default_vat_rate, (bool) $profile->prices_include_vat, self::cents($order->shipping_fee));
         }
 
         $tax = 0;
@@ -319,6 +424,11 @@ class TaxComplianceService
                 : (int) round($group['base'] * $group['rate'] / 100);
         }
 
-        return ['tax' => $tax, 'taxable_base' => $taxableBase, 'unclassified_base' => $unclassifiedBase];
+        return [
+            'tax' => $hasUnclassifiedAmount ? null : $tax,
+            'taxable_base' => $taxableBase,
+            'unclassified_base' => $unclassifiedBase,
+            'complete' => ! $hasUnclassifiedAmount,
+        ];
     }
 }

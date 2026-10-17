@@ -117,12 +117,22 @@
             const top = document.createElement('div');
             top.className = 'flex gap-2.5';
 
+            const image = document.createElement('img');
+            image.className = 'h-14 w-14 shrink-0 rounded-lg object-cover';
+            image.alt = item.name || 'Sản phẩm BloomGift';
+            image.onerror = () => {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-bloom-blush text-xl text-bloom-rose';
+                placeholder.setAttribute('role', 'img');
+                placeholder.setAttribute('aria-label', 'Chưa có ảnh cho ' + (item.name || 'sản phẩm này'));
+                placeholder.textContent = '🌷';
+                image.replaceWith(placeholder);
+            };
+            top.appendChild(image);
             if (item.image_url) {
-                const image = document.createElement('img');
-                image.className = 'h-14 w-14 shrink-0 rounded-lg object-cover';
                 image.src = item.image_url;
-                image.alt = item.name;
-                top.appendChild(image);
+            } else {
+                image.onerror();
             }
 
             const copy = document.createElement('div');

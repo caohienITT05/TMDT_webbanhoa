@@ -75,7 +75,11 @@
                         class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-50 file:text-rose-700">
                     <div class="mt-2 flex items-center gap-3">
                         <span class="text-xs text-gray-500">Ảnh hiện tại:</span>
-                        <img src="{{ $product->image_url }}" alt="" class="w-10 h-10 object-cover rounded border">
+                        @if ($product->image_url)
+                            <img src="{{ $product->image_url }}" alt="" class="w-10 h-10 object-cover rounded border"
+                                onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');">
+                        @endif
+                        <div class="{{ $product->image_url ? 'hidden' : '' }} flex w-10 h-10 items-center justify-center rounded border bg-rose-50 text-rose-400" aria-label="Chưa có ảnh sản phẩm">🌷</div>
                     </div>
                 </div>
             </div>

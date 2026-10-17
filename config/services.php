@@ -42,6 +42,8 @@ return [
 
         'client_secret' => env('PAYPAL_CLIENT_SECRET'),
 
+        'merchant_id' => env('PAYPAL_MERCHANT_ID'),
+
         'base_url' => env(
             'PAYPAL_BASE_URL',
             'https://api-m.sandbox.paypal.com'
@@ -51,6 +53,8 @@ return [
             'PAYPAL_EXCHANGE_RATE',
             26054
         ),
+
+        'timeout' => (int) env('PAYPAL_HTTP_TIMEOUT', 12),
     ],
 
     // Server-side only. Supports OpenAI-compatible providers, including

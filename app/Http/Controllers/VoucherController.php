@@ -6,6 +6,7 @@ use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\Voucher;
 use App\Support\CheckoutPricing;
+use App\Support\GuestCartSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -22,7 +23,7 @@ class VoucherController extends Controller
         if (auth()->check()) {
             $cartItems->where('user_id', auth()->id());
         } else {
-            $cartItems->where('session_id', Session::getId());
+            $cartItems->where('session_id', GuestCartSession::id());
         }
 
         $items = $cartItems->get();

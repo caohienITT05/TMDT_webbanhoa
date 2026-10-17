@@ -52,6 +52,10 @@
                 </tbody>
             </table>
             <p class="total">Tổng thanh toán: {{ number_format((float) $order->total, 0, ',', '.') }} đ</p>
+            @if ($guestOrderUrl ?? null)
+                <p><a href="{{ $guestOrderUrl }}" style="color:#9d3158;font-weight:700">Theo dõi đơn hàng và thanh toán an toàn</a></p>
+                <p style="font-size:12px">Liên kết theo dõi đơn có hiệu lực trong 30 ngày. Hãy giữ riêng email này.</p>
+            @endif
         </div>
         <div class="email-footer"><p><strong>BloomGift</strong> · Gửi trọn lời thương trong từng món quà.</p></div>
     </div>

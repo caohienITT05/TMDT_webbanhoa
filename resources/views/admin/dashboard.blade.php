@@ -227,6 +227,27 @@
 
         </div>
 
+        <section class="mb-6 rounded-2xl border border-rose-100 bg-white p-5 shadow-sm" aria-labelledby="admin-best-selling-title">
+            <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h3 id="admin-best-selling-title" class="text-sm font-bold uppercase tracking-wider text-gray-800">Sản phẩm bán chạy toàn thời gian</h3>
+                    <p class="mt-1 text-xs text-gray-500">Tổng quantity của đơn còn hiệu lực, gồm đơn đang xử lý và đã hoàn tất; loại đơn hủy, trả, hoàn tiền và thất bại. Không phải doanh thu.</p>
+                </div>
+                <a href="{{ route('admin.finance.index', ['period' => 'all']) }}" class="text-xs font-bold text-rose-600 hover:text-rose-700">Đối chiếu trong báo cáo tài chính →</a>
+            </div>
+            <ol class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                @forelse($bestSellingProducts as $index => $product)
+                    <li class="min-w-0 rounded-xl border border-gray-100 bg-gray-50 p-3">
+                        <span class="text-xs font-bold text-gray-400">{{ $index + 1 }}.</span>
+                        <p class="mt-1 truncate text-sm font-semibold text-gray-800" title="{{ $product->name }}">{{ $product->name }}</p>
+                        <p class="mt-1 text-sm font-bold text-rose-700">Đã bán {{ (int) $product->display_sold_quantity }}</p>
+                    </li>
+                @empty
+                    <li class="text-sm text-gray-500">Chưa có dòng hàng từ đơn còn hiệu lực.</li>
+                @endforelse
+            </ol>
+        </section>
+
         <!-- ========================================================
                          5. BẢNG ĐƠN ĐẶT HOA MỚI NHẤT
                          ======================================================== -->

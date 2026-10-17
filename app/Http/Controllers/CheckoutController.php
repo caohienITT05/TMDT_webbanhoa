@@ -9,25 +9,35 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Voucher;
+use App\Services\InventoryService;
 use App\Support\CheckoutPricing;
 use App\Mail\OrderConfirmationMail;
 use Illuminate\Http\Request;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class CheckoutController extends Controller
 {
+    private function ensureActiveCustomer(): void
+    {
+        $customer = Auth::user();
+        abort_unless($customer && $customer->role === 'customer' && $customer->is_active, 403);
+    }
+
     private function orderOwnedByCurrentCustomer(int|string|null $orderId): Order
     {
+        $this->ensureActiveCustomer();
         $order = Order::findOrFail($orderId);
-
         abort_unless((int) $order->user_id === (int) Auth::id(), 403);
 
         return $order;
@@ -48,15 +58,7 @@ class CheckoutController extends Controller
 
     private function cartItemsForCurrentCustomer()
     {
-        return CartItem::with('product')
-            ->where(function ($query) {
-                if (Auth::check()) {
-                    $query->where('user_id', Auth::id());
-                } else {
-                    $query->where('session_id', Session::getId());
-                }
-            })
-            ->get();
+        return CartItem::with('product')->where('user_id', Auth::id())->get();
     }
 
     private function currentProductPrice(Product $product): float
@@ -97,37 +99,294 @@ class CheckoutController extends Controller
         return $voucherId > 0 ? $voucherId : null;
     }
 
-    private function capturePayPalOrder(?string $token): void
+    private function logPayPalFailure(Order $order, string $stage, ?Response $response = null, ?Throwable $exception = null): void
+    {
+        $payload = $response?->json();
+        $this->logTransaction('payment_failed', $order, array_filter([
+            'stage' => $stage,
+            'http_status' => $response?->status(),
+            'paypal_error_code' => data_get($payload, 'name') ?? data_get($payload, 'error'),
+            'paypal_issue' => data_get($payload, 'details.0.issue'),
+            'paypal_debug_id' => data_get($payload, 'debug_id') ?? $response?->header('paypal-debug-id'),
+            'paypal_order_status' => data_get($payload, 'status'),
+            'paypal_capture_status' => data_get($payload, 'purchase_units.0.payments.captures.0.status'),
+            'paypal_capture_id_present' => filled(data_get($payload, 'purchase_units.0.payments.captures.0.id')),
+            'exception_type' => $exception ? get_class($exception) : null,
+        ], fn ($value) => $value !== null && $value !== ''));
+    }
+
+    private function paypalFailureRedirect(Order $order): \Illuminate\Http\RedirectResponse
+    {
+        return redirect()->route('orders.show', $order)
+            ->with('error', 'PayPal chưa khởi tạo được thanh toán. Đơn hàng vẫn được lưu; bạn có thể thử lại tại trang chi tiết đơn hàng.');
+    }
+
+    private function clearCartAfterPayPalApproval(Order $order): void
+    {
+        $orderItems = $order->items()->get(['product_id', 'quantity', 'price'])
+            ->map(fn ($item) => [(int) $item->product_id, (int) $item->quantity, round((float) $item->price, 2)])
+            ->sortBy(fn ($item) => implode(':', $item))
+            ->values()
+            ->all();
+        $cartItems = CartItem::query()->where('user_id', $order->user_id)->get(['product_id', 'quantity', 'price'])
+            ->map(fn ($item) => [(int) $item->product_id, (int) $item->quantity, round((float) $item->price, 2)])
+            ->sortBy(fn ($item) => implode(':', $item))
+            ->values()
+            ->all();
+
+        if ($cartItems && $cartItems === $orderItems) {
+            CartItem::query()->where('user_id', $order->user_id)->delete();
+            Session::forget(['voucher_discount', 'voucher_code', 'voucher_id', 'shipping_fee']);
+        }
+
+        $buyNow = Session::get('buy_now');
+        if (count($orderItems) === 1
+            && (int) ($buyNow['product_id'] ?? 0) === $orderItems[0][0]
+            && (int) ($buyNow['quantity'] ?? 0) === $orderItems[0][1]) {
+            Session::forget(['buy_now', 'buy_now_voucher_code', 'buy_now_voucher_discount', 'buy_now_voucher_id']);
+        }
+    }
+
+    private function capturePayPalOrder(?string $token, Order $order): array
     {
         $clientId = config('services.paypal.client_id');
         $secret = config('services.paypal.client_secret');
 
-        // The local demo uses the existing mock callback. A configured gateway
-        // must return a successful capture before the order is marked paid.
         if (empty($clientId) || empty($secret)) {
-            return;
+            if (app()->environment('testing') && str_starts_with((string) $token, 'MOCK-SANDBOX-')) {
+                return [
+                    'status' => 'COMPLETED',
+                    'purchase_units' => [[
+                        'reference_id' => $order->order_code,
+                        'payments' => ['captures' => [[
+                            'id' => $token,
+                            'amount' => [
+                                'currency_code' => 'USD',
+                                'value' => number_format(round((float) $order->total / (float) config('services.paypal.exchange_rate', 26054), 2), 2, '.', ''),
+                            ],
+                        ]]],
+                    ]],
+                ];
+            }
+
+            throw new \RuntimeException('paypal_not_configured');
         }
 
         if (! $token) {
-            throw new \RuntimeException('Thiếu mã xác nhận thanh toán PayPal.');
+            throw new \RuntimeException('paypal_token_missing');
         }
 
         $baseUrl = config('services.paypal.base_url', 'https://api-m.sandbox.paypal.com');
+        $timeout = (int) config('services.paypal.timeout', 12);
         $authResponse = Http::asForm()
+            ->connectTimeout(5)
+            ->timeout($timeout)
             ->withBasicAuth($clientId, $secret)
             ->post("{$baseUrl}/v1/oauth2/token", ['grant_type' => 'client_credentials']);
 
         if (! $authResponse->successful()) {
-            throw new \RuntimeException('Không thể xác thực với PayPal.');
+            $this->logPayPalFailure($order, 'capture_oauth', $authResponse);
+            throw new \RuntimeException('paypal_oauth_failed');
         }
 
-        $captureResponse = Http::withToken($authResponse->json('access_token'))
-            ->withHeaders(['Content-Type' => 'application/json'])
-            ->post("{$baseUrl}/v2/checkout/orders/{$token}/capture");
-
-        if (! $captureResponse->successful()) {
-            throw new \RuntimeException('PayPal chưa xác nhận giao dịch.');
+        $accessToken = $authResponse->json('access_token');
+        if (! is_string($accessToken) || $accessToken === '') {
+            $this->logPayPalFailure($order, 'capture_oauth', $authResponse);
+            throw new \RuntimeException('paypal_access_token_missing');
         }
+
+        if (! is_string($token) || $token === '') {
+            throw new \RuntimeException('paypal_token_missing');
+        }
+
+        $orderUrl = "{$baseUrl}/v2/checkout/orders/" . rawurlencode($token);
+        $orderResponse = Http::withToken($accessToken)
+            ->connectTimeout(5)
+            ->timeout($timeout)
+            ->acceptJson()
+            ->get($orderUrl);
+        $paypalOrder = $orderResponse->json();
+        if (! $orderResponse->successful() || ! $this->isVerifiedPayPalOrder($paypalOrder, $order, $token)) {
+            $this->logPayPalFailure($order, 'capture_preflight', $orderResponse);
+            throw new \RuntimeException('paypal_order_not_verified');
+        }
+
+        $payeeMerchantId = data_get($paypalOrder, 'purchase_units.0.payee.merchant_id');
+        if (data_get($paypalOrder, 'status') === 'COMPLETED') {
+            if ($this->isVerifiedPayPalCapture($paypalOrder, $order, $token, $payeeMerchantId)) {
+                return $paypalOrder;
+            }
+
+            if (data_get($paypalOrder, 'purchase_units.0.payments.captures.0.status') === 'PENDING') {
+                $this->logTransaction('payment_capture_pending', $order, [
+                    'paypal_order_id' => $token,
+                    'paypal_capture_id' => data_get($paypalOrder, 'purchase_units.0.payments.captures.0.id'),
+                    'paypal_capture_status' => 'PENDING',
+                    'paypal_capture_reason' => data_get($paypalOrder, 'purchase_units.0.payments.captures.0.status_details.reason'),
+                    'paypal_capture_amount' => data_get($paypalOrder, 'purchase_units.0.payments.captures.0.amount.value'),
+                    'paypal_capture_currency' => data_get($paypalOrder, 'purchase_units.0.payments.captures.0.amount.currency_code'),
+                ]);
+
+                throw new \RuntimeException('paypal_capture_pending');
+            }
+
+            throw new \RuntimeException('paypal_capture_not_verified');
+        }
+
+        if (data_get($paypalOrder, 'status') !== 'APPROVED') {
+            throw new \RuntimeException('paypal_order_not_approved');
+        }
+
+        $captureRequestId = 'bgc-'.substr(hash('sha256', 'bloomgift-paypal-capture:'.$order->getKey()), 0, 32);
+        $captureResponse = Http::withToken($accessToken)
+            ->connectTimeout(5)
+            ->timeout($timeout)
+            ->acceptJson()
+            ->asJson()
+            ->withHeaders(['PayPal-Request-Id' => $captureRequestId])
+            ->post("{$baseUrl}/v2/checkout/orders/" . rawurlencode($token) . '/capture', (object) []);
+
+        $capture = $captureResponse->json();
+        if ($captureResponse->successful() && $this->isVerifiedPayPalCapture($capture, $order, $token, $payeeMerchantId)) {
+            return $capture;
+        }
+
+        // A capture may succeed at PayPal while the response is lost or the
+        // local transaction fails. Read the PayPal order before considering a
+        // retry; never issue a second capture to reconcile that state.
+        $lookupResponse = Http::withToken($accessToken)
+            ->connectTimeout(5)
+            ->timeout($timeout)
+            ->acceptJson()
+            ->get($orderUrl);
+        $paypalOrder = $lookupResponse->json();
+        if ($lookupResponse->successful() && $this->isVerifiedPayPalOrder($paypalOrder, $order, $token)
+            && $this->isVerifiedPayPalCapture($paypalOrder, $order, $token, $payeeMerchantId)) {
+            return $paypalOrder;
+        }
+
+        if ($lookupResponse->successful()
+            && data_get($paypalOrder, 'status') === 'COMPLETED'
+            && data_get($paypalOrder, 'purchase_units.0.payments.captures.0.status') === 'PENDING') {
+            $this->logTransaction('payment_capture_pending', $order, [
+                'paypal_order_id' => $token,
+                'paypal_capture_id' => data_get($paypalOrder, 'purchase_units.0.payments.captures.0.id'),
+                'paypal_capture_status' => 'PENDING',
+                'paypal_capture_reason' => data_get($paypalOrder, 'purchase_units.0.payments.captures.0.status_details.reason'),
+                'paypal_capture_amount' => data_get($paypalOrder, 'purchase_units.0.payments.captures.0.amount.value'),
+                'paypal_capture_currency' => data_get($paypalOrder, 'purchase_units.0.payments.captures.0.amount.currency_code'),
+            ]);
+
+            throw new \RuntimeException('paypal_capture_pending');
+        }
+
+        $this->logPayPalFailure($order, $captureResponse->successful() ? 'capture_verification' : 'capture', $captureResponse);
+        throw new \RuntimeException('paypal_capture_not_verified');
+    }
+
+    private function isVerifiedPayPalOrder(array $payload, Order $order, string $token): bool
+    {
+        $amount = data_get($payload, 'purchase_units.0.amount');
+        $referenceId = data_get($payload, 'purchase_units.0.reference_id');
+        $payeeMerchantId = data_get($payload, 'purchase_units.0.payee.merchant_id');
+        $expectedMerchantId = config('services.paypal.merchant_id');
+        $expectedAmount = number_format(round((float) $order->total / (float) config('services.paypal.exchange_rate', 26054), 2), 2, '.', '');
+
+        return is_string(data_get($payload, 'id'))
+            && hash_equals($token, data_get($payload, 'id'))
+            && data_get($payload, 'intent') === 'CAPTURE'
+            && in_array(data_get($payload, 'status'), ['CREATED', 'APPROVED', 'COMPLETED'], true)
+            && is_array($amount)
+            && ($amount['currency_code'] ?? null) === 'USD'
+            && number_format((float) ($amount['value'] ?? -1), 2, '.', '') === $expectedAmount
+            && is_string($referenceId)
+            && hash_equals((string) $order->order_code, $referenceId)
+            && is_string($payeeMerchantId)
+            && $payeeMerchantId !== ''
+            && (! is_string($expectedMerchantId) || $expectedMerchantId === '' || hash_equals($expectedMerchantId, $payeeMerchantId));
+    }
+
+    private function isVerifiedPayPalCapture(array $payload, Order $order, string $token, string $expectedPayeeMerchantId): bool
+    {
+        $capturedAmount = data_get($payload, 'purchase_units.0.payments.captures.0.amount');
+        $captureStatus = data_get($payload, 'purchase_units.0.payments.captures.0.status');
+        $referenceId = data_get($payload, 'purchase_units.0.reference_id');
+        $captureId = data_get($payload, 'purchase_units.0.payments.captures.0.id');
+        $expectedAmount = number_format(round((float) $order->total / (float) config('services.paypal.exchange_rate', 26054), 2), 2, '.', '');
+
+        return data_get($payload, 'status') === 'COMPLETED'
+            && $captureStatus === 'COMPLETED'
+            && is_string(data_get($payload, 'id'))
+            && hash_equals($token, data_get($payload, 'id'))
+            && is_array($capturedAmount)
+            && is_string($captureId)
+            && $captureId !== ''
+            && ($capturedAmount['currency_code'] ?? null) === 'USD'
+            && number_format((float) ($capturedAmount['value'] ?? -1), 2, '.', '') === $expectedAmount
+            && is_string($referenceId)
+            && hash_equals((string) $order->order_code, $referenceId)
+            && (! filled(data_get($payload, 'purchase_units.0.payee.merchant_id'))
+                || hash_equals($expectedPayeeMerchantId, (string) data_get($payload, 'purchase_units.0.payee.merchant_id')));
+    }
+
+    private function checkoutItemsMatch(Order $order, array $orderProducts): bool
+    {
+        $normalize = fn ($rows) => collect($rows)
+            ->map(fn ($item) => [
+                (int) $item['product_id'],
+                (int) $item['quantity'],
+                round((float) $item['price'], 2),
+                round((float) $item['subtotal'], 2),
+            ])
+            ->sortBy(fn ($item) => implode(':', $item))
+            ->values()
+            ->all();
+
+        return $normalize($order->items->toArray()) === $normalize($orderProducts);
+    }
+
+    private function findPendingPayPalCheckout(
+        array $validated,
+        array $orderProducts,
+        float $subtotal,
+        float $discount,
+        array $fees,
+        float $total,
+        ?string $fullNote
+    ): ?Order {
+        foreach (['gift_card_fee', 'gift_wrap_fee'] as $field) {
+            if (! Schema::hasColumn('orders', $field) && (float) $fees[$field] !== 0.0) {
+                return null;
+            }
+        }
+
+        $query = Order::query()
+            ->with('items')
+            ->where('user_id', Auth::id())
+            ->where('payment_method', 'paypal')
+            ->where('payment_status', 'pending')
+            ->where('order_status', 'pending')
+            ->where('recipient_name', $validated['recipient_name'])
+            ->where('recipient_phone', $validated['recipient_phone'])
+            ->where('recipient_address', $validated['recipient_address'])
+            ->whereDate('delivery_date', $validated['delivery_date'])
+            ->where('delivery_slot_id', $validated['delivery_slot_id'])
+            ->where('subtotal', $subtotal)
+            ->where('discount', $discount)
+            ->where('shipping_fee', $fees['shipping_fee'])
+            ->where('total', $total)
+            ->where('note', $fullNote)
+            ->where('created_at', '>=', now()->subMinutes(30))
+            ->whereHas('payments', fn ($payments) => $payments->where('payment_method', 'paypal')->where('status', 'pending'))
+            ->latest('id');
+
+        foreach (['gift_card_fee', 'gift_wrap_fee'] as $field) {
+            if (Schema::hasColumn('orders', $field)) {
+                $query->where($field, $fees[$field]);
+            }
+        }
+
+        return $query->get()->first(fn (Order $order) => $this->checkoutItemsMatch($order, $orderProducts));
     }
 
     private function checkoutView($cartItems, float $subtotal, string $checkoutMode = 'cart', ?Product $buyNowProduct = null, ?int $buyNowQuantity = null)
@@ -160,6 +419,7 @@ class CheckoutController extends Controller
      */
     public function index()
     {
+        $this->ensureActiveCustomer();
         $cartItems = $this->cartItemsForCurrentCustomer();
 
         // Nếu giỏ hàng trống thì quay về trang cart
@@ -181,6 +441,7 @@ class CheckoutController extends Controller
      */
     public function buyNow()
     {
+        $this->ensureActiveCustomer();
         $buyNow = Session::get('buy_now');
         $productId = $buyNow['product_id'] ?? null;
         $quantity = (int) ($buyNow['quantity'] ?? 0);
@@ -211,12 +472,14 @@ class CheckoutController extends Controller
     /**
      * 2. Xử lý tạo đơn hàng khi khách bấm Đặt hàng ngay
      */
-    public function store(Request $request)
+    public function store(Request $request, InventoryService $inventory)
     {
+        $this->ensureActiveCustomer();
         $validated = $request->validate([
             'recipient_name' => 'required|string|max:255',
             'recipient_phone' => 'required|string|max:20',
             'recipient_address' => 'required|string|max:500',
+            'recipient_email' => ['nullable', 'email:rfc', 'max:255'],
             'delivery_date' => 'required|date|after_or_equal:today',
             'delivery_slot_id' => 'required',
             'payment_method' => 'required|in:cod,paypal',
@@ -296,8 +559,10 @@ class CheckoutController extends Controller
         $fullNote = !empty($noteParts) ? implode(" | ", $noteParts) : null;
 
 
-        // Lưu đơn hàng an toàn qua DB Transaction
-        [$order, $voucher] = DB::transaction(function () use ($validated, $orderProducts, $subtotal, $fees, $voucherId, $fullNote) {
+        // Lock the customer row so repeated PayPal submissions can reuse the
+        // matching pending order instead of creating duplicate orders/payments.
+        [$order, $voucher, $created] = DB::transaction(function () use ($validated, $orderProducts, $subtotal, $fees, $voucherId, $fullNote, $inventory) {
+            DB::table('users')->where('id', Auth::id())->lockForUpdate()->first();
             $voucher = $this->lockedVoucherForCheckout($voucherId, $subtotal);
 
             if ($voucherId && ! $voucher) {
@@ -308,10 +573,30 @@ class CheckoutController extends Controller
 
             $discount = $voucher ? min((float) $voucher->calculateDiscount($subtotal), $subtotal) : 0;
             $total = CheckoutPricing::total($subtotal, $fees, $discount);
+
+            if ($validated['payment_method'] === 'paypal') {
+                $existingOrder = $this->findPendingPayPalCheckout(
+                    $validated,
+                    $orderProducts,
+                    $subtotal,
+                    $discount,
+                    $fees,
+                    $total,
+                    $fullNote
+                );
+
+                if ($existingOrder) {
+                    return [$existingOrder, $voucher, false];
+                }
+            }
+
             $orderCode = 'BG' . now()->format('YmdHis') . strtoupper(Str::random(4));
 
             $order = Order::create([
                 'user_id' => Auth::id(),
+                ...(Schema::hasColumn('orders', 'customer_email') ? [
+                    'customer_email' => $validated['recipient_email'] ?? Auth::user()?->email,
+                ] : []),
                 'order_code' => $orderCode,
                 'recipient_name' => $validated['recipient_name'],
                 'recipient_phone' => $validated['recipient_phone'],
@@ -321,12 +606,14 @@ class CheckoutController extends Controller
                 'subtotal' => $subtotal,
                 'discount' => $discount,
                 'shipping_fee' => $fees['shipping_fee'],
+                ...(Schema::hasColumn('orders', 'gift_card_fee') ? ['gift_card_fee' => $fees['gift_card_fee']] : []),
+                ...(Schema::hasColumn('orders', 'gift_wrap_fee') ? ['gift_wrap_fee' => $fees['gift_wrap_fee']] : []),
                 'total' => $total,
-                'total_amount' => $total,
+                ...(Schema::hasColumn('orders', 'total_amount') ? ['total_amount' => $total] : []),
                 'payment_method' => $validated['payment_method'],
                 'payment_status' => 'pending',
                 'order_status' => 'pending',
-                'status' => 'PENDING',
+                ...(Schema::hasColumn('orders', 'status') ? ['status' => 'PENDING'] : []),
                 'note' => $fullNote,
             ]);
 
@@ -341,6 +628,13 @@ class CheckoutController extends Controller
                 ]);
             }
 
+            // Reserve stock in the same transaction as order creation. This
+            // applies to COD and PayPal pending orders and is idempotent.
+            $inventory->reserveForOrder($order, array_map(static fn (array $prod): array => [
+                'product_id' => $prod['product_id'],
+                'quantity' => $prod['quantity'],
+            ], $orderProducts));
+
             Payment::create([
                 'order_id' => $order->id,
                 'payment_method' => $validated['payment_method'],
@@ -354,33 +648,38 @@ class CheckoutController extends Controller
                 $voucher->increment('used_count');
             }
 
-            return [$order, $voucher];
+            return [$order, $voucher, true];
         });
 
         if ($validated['payment_method'] === 'paypal') {
             $this->rememberVoucherForPayPal($order, $voucher);
         }
 
-        $this->logTransaction('order_created', $order);
+        if (! $created) {
+            $this->logTransaction('payment_retry_requested', $order);
 
-        // Cart checkout clears only its own cart. Buy Now never touches cart_items.
-        if ($checkoutMode === 'cart' && Auth::check()) {
-            CartItem::where('user_id', Auth::id())->delete();
-        } elseif ($checkoutMode === 'cart') {
-            CartItem::where('session_id', Session::getId())->delete();
-        } else {
-            Session::forget(['buy_now', 'buy_now_voucher_code', 'buy_now_voucher_discount', 'buy_now_voucher_id']);
+            return redirect()->route('paypal.create', ['order' => $order->id]);
         }
 
-        // Keep voucher data scoped to the checkout mode that just completed.
-        if ($checkoutMode === 'cart') {
-            Session::forget(['voucher_discount', 'voucher_code', 'voucher_id', 'shipping_fee']);
+        $this->logTransaction('order_created', $order);
+
+        // COD completes locally; a PayPal cart stays intact until the provider
+        // has returned a valid approval URL.
+        if ($validated['payment_method'] === 'cod') {
+            if ($checkoutMode === 'cart') {
+                CartItem::where('user_id', Auth::id())->delete();
+                Session::forget(['voucher_discount', 'voucher_code', 'voucher_id', 'shipping_fee']);
+            } else {
+                Session::forget(['buy_now', 'buy_now_voucher_code', 'buy_now_voucher_discount', 'buy_now_voucher_id']);
+            }
         }
 
         // Gửi email hóa đơn xác nhận đơn hàng tự động
         try {
-            $emailTo = Auth::user()->email ?? $request->input('recipient_email') ?? 'customer@bloomgift.vn';
-            Mail::to($emailTo)->send(new OrderConfirmationMail($order));
+            $emailTo = Auth::user()->email;
+            if ($emailTo) {
+                Mail::to($emailTo)->send(new OrderConfirmationMail($order));
+            }
         } catch (\Throwable $e) {
             \Log::error('Lỗi gửi email xác nhận đơn hàng: ' . $e->getMessage());
         }
@@ -407,43 +706,174 @@ class CheckoutController extends Controller
      */
     public function paypalCreate($orderId)
     {
+        $this->ensureActiveCustomer();
         $order = $this->orderOwnedByCurrentCustomer($orderId);
         $this->logTransaction('payment_initiated', $order);
+
+        if ($order->payment_method !== 'paypal') {
+            return redirect()->route('orders.show', $order)->with('error', 'Đơn hàng này không sử dụng PayPal.');
+        }
+
+        if ($order->payment_status === 'paid') {
+            return redirect()->route('orders.show', $order)->with('success', 'Đơn hàng đã được thanh toán.');
+        }
+
+        if (in_array(strtolower((string) ($order->order_status ?: $order->status)), ['cancelled', 'canceled', 'returned', 'refunded'], true)) {
+            return redirect()->route('orders.show', $order)->with('error', 'Đơn hàng đã hủy nên không thể thanh toán.');
+        }
+
+        $payment = Payment::query()
+            ->where('order_id', $order->id)
+            ->where('payment_method', 'paypal')
+            ->latest('id')
+            ->first();
+
+        if (! $payment || strtolower((string) $payment->status) !== 'pending') {
+            return redirect()->route('orders.show', $order)->with('error', 'Không tìm thấy giao dịch PayPal đang chờ của đơn hàng.');
+        }
 
         $clientId = config('services.paypal.client_id');
         $secret = config('services.paypal.client_secret');
         $baseUrl = config('services.paypal.base_url', 'https://api-m.sandbox.paypal.com');
-        $exchangeRate = config('services.paypal.exchange_rate', 26054);
+        $exchangeRate = (float) config('services.paypal.exchange_rate', 26054);
 
-        // Quy đổi VND sang USD
-        $usdAmount = round($order->total / $exchangeRate, 2);
+        if ($exchangeRate <= 0) {
+            $this->logPayPalFailure($order, 'configuration');
+
+            return $this->paypalFailureRedirect($order);
+        }
+
+        $usdAmount = round((float) $order->total / $exchangeRate, 2);
         if ($usdAmount < 0.01) {
-            $usdAmount = 1.00;
+            $this->logPayPalFailure($order, 'amount_conversion');
+
+            return redirect()->route('orders.show', $order)
+                ->with('error', 'Tổng đơn hàng thấp hơn mức thanh toán tối thiểu của PayPal. Vui lòng liên hệ BloomGift.');
         }
 
         if (empty($clientId) || empty($secret)) {
-            // Chế độ test giả lập nếu chưa cấu hình Sandbox
-            return redirect()->route('paypal.success', [
-                'order_id' => $order->id,
-                'token' => 'MOCK-SANDBOX-' . strtoupper(Str::random(10)),
-                'PayerID' => 'MOCK-PAYER-' . strtoupper(Str::random(6)),
-            ]);
+            if (app()->environment('testing')) {
+                $token = 'MOCK-SANDBOX-' . strtoupper(Str::random(10));
+                $payment->update(['transaction_id' => $token]);
+                $this->clearCartAfterPayPalApproval($order);
+
+                return redirect()->route('paypal.success', [
+                    'order_id' => $order->id,
+                    'token' => $token,
+                    'PayerID' => 'MOCK-PAYER-' . strtoupper(Str::random(6)),
+                ]);
+            }
+
+            $this->logPayPalFailure($order, 'configuration');
+
+            return $this->paypalFailureRedirect($order);
         }
 
+        $timeout = (int) config('services.paypal.timeout', 12);
+        $stage = 'oauth';
+        $failureResponse = null;
         try {
             $authResponse = Http::asForm()
+                ->connectTimeout(5)
+                ->timeout($timeout)
                 ->withBasicAuth($clientId, $secret)
                 ->post("{$baseUrl}/v1/oauth2/token", [
                     'grant_type' => 'client_credentials',
                 ]);
 
             if (!$authResponse->successful()) {
-                throw new \Exception('Không thể kết nối API PayPal: ' . $authResponse->body());
+                $failureResponse = $authResponse;
+                throw new \RuntimeException('paypal_oauth_failed');
             }
 
-            $accessToken = $authResponse->json()['access_token'];
+            $accessToken = $authResponse->json('access_token');
+            if (! is_string($accessToken) || $accessToken === '') {
+                $failureResponse = $authResponse;
+                throw new \RuntimeException('paypal_access_token_missing');
+            }
 
+            // Reuse the order created by an earlier attempt. A repeated POST
+            // with the same idempotency key can return a completed order
+            // without an approval link, which is not a new-order failure.
+            if (is_string($payment->transaction_id) && $payment->transaction_id !== '') {
+                $existingOrderId = $payment->transaction_id;
+                $stage = 'existing_order_lookup';
+                $existingOrderResponse = Http::withToken($accessToken)
+                    ->connectTimeout(5)
+                    ->timeout($timeout)
+                    ->acceptJson()
+                    ->get("{$baseUrl}/v2/checkout/orders/" . rawurlencode($existingOrderId));
+                $existingOrder = $existingOrderResponse->json();
+
+                if (! $existingOrderResponse->successful()
+                    || ! is_array($existingOrder)
+                    || ! $this->isVerifiedPayPalOrder($existingOrder, $order, $existingOrderId)) {
+                    $failureResponse = $existingOrderResponse;
+                    throw new \RuntimeException('paypal_existing_order_not_verified');
+                }
+
+                $existingStatus = data_get($existingOrder, 'status');
+                if ($existingStatus === 'CREATED') {
+                    $approvalUrl = collect(data_get($existingOrder, 'links', []))
+                        ->firstWhere('rel', 'approve')['href'] ?? null;
+                    $approvalHost = is_string($approvalUrl) ? parse_url($approvalUrl, PHP_URL_HOST) : null;
+                    $apiHost = (string) parse_url($baseUrl, PHP_URL_HOST);
+                    $expectedHost = str_contains(strtolower($apiHost), 'sandbox')
+                        ? 'www.sandbox.paypal.com'
+                        : 'www.paypal.com';
+
+                    if (is_string($approvalUrl)
+                        && parse_url($approvalUrl, PHP_URL_SCHEME) === 'https'
+                        && strtolower((string) $approvalHost) === $expectedHost) {
+                        return redirect()->away($approvalUrl);
+                    }
+
+                    $failureResponse = $existingOrderResponse;
+                    throw new \RuntimeException('paypal_existing_approval_url_invalid');
+                }
+
+                if ($existingStatus === 'APPROVED') {
+                    return redirect()->route('paypal.success', [
+                        'order_id' => $order->id,
+                        'token' => $existingOrderId,
+                    ]);
+                }
+
+                if ($existingStatus === 'COMPLETED') {
+                    $payeeMerchantId = data_get($existingOrder, 'purchase_units.0.payee.merchant_id');
+                    if ($this->isVerifiedPayPalCapture($existingOrder, $order, $existingOrderId, $payeeMerchantId)) {
+                        return redirect()->route('paypal.success', [
+                            'order_id' => $order->id,
+                            'token' => $existingOrderId,
+                        ]);
+                    }
+
+                    if (data_get($existingOrder, 'purchase_units.0.payments.captures.0.status') === 'PENDING') {
+                        $this->logTransaction('payment_capture_pending', $order, [
+                            'paypal_order_id' => $existingOrderId,
+                            'paypal_capture_id' => data_get($existingOrder, 'purchase_units.0.payments.captures.0.id'),
+                            'paypal_capture_status' => 'PENDING',
+                            'paypal_capture_reason' => data_get($existingOrder, 'purchase_units.0.payments.captures.0.status_details.reason'),
+                        ]);
+
+                        return redirect()->route('orders.show', $order)
+                            ->with('error', 'PayPal hiện trả Capture ở trạng thái PENDING (chưa COMPLETED), nên BloomGift chưa thể xác nhận đã thanh toán. Hãy bấm “Kiểm tra hoặc tiếp tục PayPal” để truy vấn trạng thái mới nhất; chỉ tải lại trang sẽ không làm Capture được duyệt. Không thanh toán lại. Nếu Capture đang PENDING_REVIEW, PayPal Sandbox cần hoàn tất việc kiểm tra trước khi đơn có thể chuyển sang đã thanh toán.');
+                    }
+                }
+
+                $failureResponse = $existingOrderResponse;
+                throw new \RuntimeException('paypal_existing_order_not_resumable');
+            }
+
+            $stage = 'create_order';
             $orderResponse = Http::withToken($accessToken)
+                ->connectTimeout(5)
+                ->timeout($timeout)
+                ->acceptJson()
+                ->asJson()
+                ->withHeaders([
+                    'PayPal-Request-Id' => 'bg-'.substr(hash('sha256', 'bloomgift-paypal-create:'.$payment->getKey()), 0, 32),
+                ])
                 ->post("{$baseUrl}/v2/checkout/orders", [
                     'intent' => 'CAPTURE',
                     'purchase_units' => [
@@ -466,18 +896,44 @@ class CheckoutController extends Controller
 
             if ($orderResponse->successful()) {
                 $orderData = $orderResponse->json();
-                foreach ($orderData['links'] as $link) {
-                    if ($link['rel'] === 'approve') {
-                        return redirect()->away($link['href']);
+                $paypalOrderId = data_get($orderData, 'id');
+                $approvalUrl = collect(data_get($orderData, 'links', []))
+                    ->firstWhere('rel', 'approve')['href'] ?? null;
+                $approvalHost = is_string($approvalUrl) ? parse_url($approvalUrl, PHP_URL_HOST) : null;
+                $apiHost = (string) parse_url($baseUrl, PHP_URL_HOST);
+                $expectedHost = str_contains(strtolower($apiHost), 'sandbox')
+                    ? 'www.sandbox.paypal.com'
+                    : 'www.paypal.com';
+
+                if (is_string($paypalOrderId)
+                    && $paypalOrderId !== ''
+                    && is_string($approvalUrl)
+                    && parse_url($approvalUrl, PHP_URL_SCHEME) === 'https'
+                    && strtolower((string) $approvalHost) === $expectedHost) {
+                    $stored = $payment->update(['transaction_id' => $paypalOrderId]);
+                    $payment->refresh();
+                    if (! $stored || ! is_string($payment->transaction_id) || ! hash_equals($payment->transaction_id, $paypalOrderId)) {
+                        throw new \RuntimeException('paypal_order_id_persistence_failed');
                     }
+                    $this->clearCartAfterPayPalApproval($order);
+                    $this->logTransaction('payment_approval_ready', $order, [
+                        'payment_id' => $payment->id,
+                        'paypal_order_id' => $paypalOrderId,
+                    ]);
+
+                    return redirect()->away($approvalUrl);
                 }
+
+                $failureResponse = $orderResponse;
+                throw new \RuntimeException('paypal_approval_url_invalid');
             }
 
-            throw new \Exception('Không lấy được link thanh toán từ PayPal.');
-        } catch (\Throwable $e) {
-            $this->logTransaction('payment_failed', $order);
+            $failureResponse = $orderResponse;
+            throw new \RuntimeException('paypal_order_creation_failed');
+        } catch (Throwable $e) {
+            $this->logPayPalFailure($order, $stage, $failureResponse, $e);
 
-            return redirect()->route('checkout.index')->with('error', 'Lỗi PayPal: ' . $e->getMessage());
+            return $this->paypalFailureRedirect($order);
         }
     }
 
@@ -486,12 +942,14 @@ class CheckoutController extends Controller
      */
     public function paypalSuccess(Request $request)
     {
+        $this->ensureActiveCustomer();
         $orderId = $request->query('order_id');
         $order = $this->orderOwnedByCurrentCustomer($orderId);
         $voucherId = $this->paypalVoucherIdForOrder($order);
+        $token = $request->query('token');
 
         try {
-            $order = DB::transaction(function () use ($order, $request, $voucherId) {
+            $order = DB::transaction(function () use ($order, $token, $voucherId) {
                 $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
                 $payment = Payment::query()
                     ->where('order_id', $lockedOrder->id)
@@ -506,8 +964,16 @@ class CheckoutController extends Controller
                     throw new \RuntimeException('Không tìm thấy giao dịch thanh toán của đơn hàng.');
                 }
 
-                if ($payment->status === 'completed') {
+                if (strtolower((string) $payment->status) === 'completed') {
                     return $lockedOrder->fresh();
+                }
+
+                if ($lockedOrder->payment_method !== 'paypal'
+                    || ! is_string($token)
+                    || $token === ''
+                    || ! is_string($payment->transaction_id)
+                    || ! hash_equals($payment->transaction_id, $token)) {
+                    throw new \RuntimeException('paypal_order_token_mismatch');
                 }
 
                 $voucher = $voucherId
@@ -520,11 +986,11 @@ class CheckoutController extends Controller
 
                 // Keep the voucher row locked across the capture so another
                 // callback cannot capture the last voucher usage concurrently.
-                $token = $request->query('token');
-                $this->capturePayPalOrder($token);
+                $capture = $this->capturePayPalOrder($token, $lockedOrder);
+                $captureId = data_get($capture, 'purchase_units.0.payments.captures.0.id') ?? $token;
                 $payment->update([
                     'status' => 'completed',
-                    'transaction_id' => $token ?? ('PAYPAL_' . Str::random(10)),
+                    'transaction_id' => $captureId,
                     'paid_at' => now(),
                 ]);
                 if ($voucher) {
@@ -534,19 +1000,34 @@ class CheckoutController extends Controller
                 $lockedOrder->update([
                     'payment_status' => 'paid',
                     'order_status' => 'confirmed',
-                    'status' => 'CONFIRMED',
+                    ...(Schema::hasColumn('orders', 'status') ? ['status' => 'CONFIRMED'] : []),
                 ]);
 
                 return $lockedOrder->fresh();
             });
-        } catch (\Throwable $e) {
-            $this->logTransaction('payment_failed', $order, ['reason' => $e->getMessage()]);
+        } catch (Throwable $e) {
+            $this->logPayPalFailure($order, 'callback', null, $e);
 
-            return redirect()->route('checkout.index')->with('error', 'Không thể xác nhận thanh toán PayPal. Vui lòng thử lại hoặc liên hệ BloomGift.');
+            if ($e->getMessage() === 'paypal_capture_pending') {
+                return redirect()->route('orders.show', $order)
+                    ->with('error', 'PayPal hiện trả Capture ở trạng thái PENDING (chưa COMPLETED), nên BloomGift chưa thể xác nhận đã thanh toán. Hãy bấm “Kiểm tra hoặc tiếp tục PayPal” để truy vấn trạng thái mới nhất; chỉ tải lại trang sẽ không làm Capture được duyệt. Không thanh toán lại. Nếu Capture đang PENDING_REVIEW, PayPal Sandbox cần hoàn tất việc kiểm tra trước khi đơn có thể chuyển sang đã thanh toán.');
+            }
+
+            return redirect()->route('orders.show', $order)
+                ->with('error', 'PayPal chưa xác nhận được thanh toán. Đơn vẫn đang chờ; bạn có thể thử lại từ trang đơn hàng.');
         }
 
         Session::forget($this->paypalVoucherSessionKey($order->id));
-        $this->logTransaction('payment_success', $order);
+        $completedPayment = Payment::query()
+            ->where('order_id', $order->id)
+            ->whereRaw('LOWER(payment_method) = ?', ['paypal'])
+            ->latest('id')
+            ->first();
+        $this->logTransaction('payment_success', $order, [
+            'payment_id' => $completedPayment?->id,
+            'paypal_order_id' => is_string($token) ? $token : null,
+            'paypal_capture_id' => $completedPayment?->transaction_id,
+        ]);
 
         if (\Illuminate\Support\Facades\Route::has('orders.show')) {
             return redirect()->route('orders.show', $order)->with('success', 'Thanh toán PayPal thành công! Đơn hoa #' . $order->order_code . ' đã được thanh toán.');
@@ -564,10 +1045,10 @@ class CheckoutController extends Controller
      */
     public function paypalCancel(Request $request)
     {
+        $this->ensureActiveCustomer();
         $order = $this->orderOwnedByCurrentCustomer($request->query('order_id'));
-        Session::forget($this->paypalVoucherSessionKey($order->id));
         $this->logTransaction('payment_cancelled', $order);
 
-        return redirect()->route('checkout.index')->with('error', 'Bạn đã hủy quá trình thanh toán qua PayPal.');
+        return redirect()->route('orders.show', $order)->with('error', 'Bạn đã hủy thanh toán PayPal. Đơn vẫn đang chờ và có thể thanh toán lại tại đây.');
     }
 }
